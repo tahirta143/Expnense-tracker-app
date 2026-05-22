@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../themes/app_theme.dart';
+import 'onboarding_screen.dart';
+import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -34,15 +37,26 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _animationController.forward();
-    _navigateToHome();
+    _checkNavigation();
   }
 
-  void _navigateToHome() {
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+  void _checkNavigation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final showOnboarding = prefs.getBool('showOnboarding') ?? true;
+
+    await Future.delayed(const Duration(seconds: 3));
+    
+    if (mounted) {
+      if (showOnboarding) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
       }
-    });
+    }
   }
 
   @override
@@ -57,12 +71,11 @@ class _SplashScreenState extends State<SplashScreen>
     final sh = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor, // ✅ solid background, no gradient
+      backgroundColor: AppTheme.backgroundColor,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ── Animated Logo PNG ─────────────────────────────────
             ScaleTransition(
               scale: _scaleAnimation,
               child: FadeTransition(
@@ -75,10 +88,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
             ),
-
             SizedBox(height: sh * 0.04),
-
-            // ── App Title only ────────────────────────────────────
             FadeTransition(
               opacity: _opacityAnimation,
               child: Text(
@@ -91,10 +101,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
             ),
-
             SizedBox(height: sh * 0.08),
-
-            // ── Loading Indicator ─────────────────────────────────
             FadeTransition(
               opacity: _opacityAnimation,
               child: SizedBox(

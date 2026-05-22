@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../database/database_helper.dart';
 import '../providers/expense_provider.dart';
 import '../providers/category_provider.dart';
 import '../models/expense.dart';
@@ -139,6 +140,27 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             }
                           }
+                        } else if (value == 'clear') {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: AppTheme.cardColor,
+                              title: const Text('Clear All Data'),
+                              content: const Text('Are you sure you want to delete all transactions and categories? This cannot be undone.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Clear', style: TextStyle(color: AppTheme.errorColor))),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true && context.mounted) {
+                            await DatabaseHelper().clearAllData();
+                            if (context.mounted) {
+                              context.read<ExpenseProvider>().loadExpenses();
+                              context.read<CategoryProvider>().loadCategories();
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All data cleared')));
+                            }
+                          }
                         }
                       },
                       itemBuilder: (context) => [
@@ -159,6 +181,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               Icon(Icons.download, color: AppTheme.primaryColor, size: 20),
                               SizedBox(width: 10),
                               Text('Import Backup', style: TextStyle(color: AppTheme.textPrimary)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'clear',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_sweep_rounded, color: AppTheme.errorColor, size: 20),
+                              SizedBox(width: 10),
+                              Text('Clear All Data', style: TextStyle(color: AppTheme.errorColor)),
                             ],
                           ),
                         ),
@@ -354,6 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final sw = MediaQuery.of(context).size.width;
     final monthName = DateFormat('MMMM, yyyy').format(now);
     final recentExpenses = provider.expenses.take(5).toList();
+    final balance = provider.monthlyIncomeTotal - provider.monthlyTotal;
     
     return SingleChildScrollView(
       padding: EdgeInsets.only(top: sw * 0.03, bottom: 100),
@@ -375,10 +408,10 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSpacing: 8,
               childAspectRatio: 2.4,
               children: [
-                _summaryCard(title: 'Total Income', value: 'Rs ${provider.monthlyIncomeTotal.toStringAsFixed(0)}', sub: 'this month', color: AppTheme.primaryColor, icon: '📈', delay: 0),
-                _summaryCard(title: 'Total Expense', value: 'Rs ${provider.monthlyTotal.toStringAsFixed(0)}', sub: 'this month', color: AppTheme.errorColor, icon: '📉', delay: 100),
-                _summaryCard(title: 'Balance', value: 'Rs ${(provider.monthlyIncomeTotal - provider.monthlyTotal).toStringAsFixed(0)}', sub: 'remaining', color: AppTheme.primaryColor, icon: '⚖️', delay: 200),
-                _summaryCard(title: 'Transactions', value: provider.expenses.length.toString(), sub: 'this month', color: AppTheme.textPrimary, icon: '📝', delay: 300),
+                _summaryCard(title: 'Total Income', value: 'Rs ${provider.monthlyIncomeTotal.toStringAsFixed(0)}', sub: 'this month', color: AppTheme.primaryColor, icon: Icons.account_balance_wallet_rounded, delay: 0),
+                _summaryCard(title: 'Total Expense', value: 'Rs ${provider.monthlyTotal.toStringAsFixed(0)}', sub: 'this month', color: AppTheme.errorColor, icon: Icons.shopping_cart_checkout_rounded, delay: 100),
+                _summaryCard(title: 'Balance', value: 'Rs ${balance.toStringAsFixed(0)}', sub: 'remaining', color: balance < 0 ? AppTheme.errorColor : AppTheme.primaryColor, icon: Icons.account_balance_rounded, delay: 200),
+                _summaryCard(title: 'Transactions', value: provider.expenses.length.toString(), sub: 'this month', color: AppTheme.textPrimary, icon: Icons.receipt_long_rounded, delay: 300),
               ],
             ),
           ),
@@ -448,7 +481,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _summaryCard({required String title, required String value, required String sub, required Color color, required String icon, int delay = 0}) {
+  Widget _summaryCard({required String title, required String value, required String sub, required Color color, required IconData icon, int delay = 0}) {
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 400 + delay),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -459,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.borderColor)),
         child: Row(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 20)),
+            Icon(icon, color: color, size: 22),
             const SizedBox(width: 10),
             Expanded(
               child: Column(

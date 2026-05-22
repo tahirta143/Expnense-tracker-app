@@ -5,12 +5,11 @@ import '../providers/category_provider.dart';
 import '../models/expense.dart';
 import '../themes/app_theme.dart';
 import '../widgets/expense_card.dart';
-import '../widgets/category_chip.dart';
 import '../models/category.dart';
 import 'package:intl/intl.dart';
 
 class ExpenseListScreen extends StatefulWidget {
-  const ExpenseListScreen({Key? key}) : super(key: key);
+  const ExpenseListScreen({super.key});
 
   @override
   State<ExpenseListScreen> createState() => _ExpenseListScreenState();
@@ -122,7 +121,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.only(bottom: 110),
                         itemCount: filteredExpenses.length,
                         itemBuilder: (context, index) {
                           final expense = filteredExpenses[index];
@@ -213,10 +212,15 @@ class _EditExpenseSheetState extends State<_EditExpenseSheet> {
     final categories = context.read<CategoryProvider>().categories;
     String icon = '📌';
     if (_isIncome) {
-      if (_selectedCategory == 'Salary') icon = '💵';
-      else if (_selectedCategory == 'Business') icon = '📈';
-      else if (_selectedCategory == 'Investment') icon = '🏦';
-      else icon = '💰';
+      if (_selectedCategory == 'Salary') {
+        icon = '💵';
+      } else if (_selectedCategory == 'Business') {
+        icon = '📈';
+      } else if (_selectedCategory == 'Investment') {
+        icon = '🏦';
+      } else {
+        icon = '💰';
+      }
     } else {
       icon = categories.isNotEmpty ? categories.firstWhere((c) => c.name == _selectedCategory, orElse: () => categories.first).icon : '📌';
     }
@@ -272,6 +276,10 @@ class _EditExpenseSheetState extends State<_EditExpenseSheet> {
                     const SizedBox(height: 8),
                     _field(controller: _amountController, hint: '0.00', icon: Icons.attach_money, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
                     const SizedBox(height: 16),
+                    _label('Category'),
+                    const SizedBox(height: 10),
+                    _isIncome ? _buildIncomeCategoryDropdown() : _buildExpenseCategoryDropdown(),
+                    const SizedBox(height: 16),
                     _label('Date'),
                     const SizedBox(height: 8),
                     GestureDetector(
@@ -313,6 +321,47 @@ class _EditExpenseSheetState extends State<_EditExpenseSheet> {
   }
 
   Widget _label(String text) => Text(text, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600));
+
+  Widget _buildIncomeCategoryDropdown() {
+    final incomeCats = ['Salary', 'Business', 'Investment', 'Other'];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.borderColor)),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedCategory,
+          isExpanded: true,
+          dropdownColor: AppTheme.cardColor,
+          items: incomeCats.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(color: AppTheme.textPrimary)))).toList(),
+          onChanged: (v) => setState(() => _selectedCategory = v!),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpenseCategoryDropdown() {
+    return Consumer<CategoryProvider>(
+      builder: (context, catProvider, _) {
+        final cats = catProvider.categories;
+        if (cats.isEmpty) return const Text('No categories', style: TextStyle(color: AppTheme.textSecondary));
+        if (!cats.any((c) => c.name == _selectedCategory)) _selectedCategory = cats.first.name;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.borderColor)),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedCategory,
+              isExpanded: true,
+              dropdownColor: AppTheme.cardColor,
+              items: cats.map((c) => DropdownMenuItem(value: c.name, child: Row(children: [Text(c.icon), const SizedBox(width: 10), Text(c.name, style: const TextStyle(color: AppTheme.textPrimary))]))).toList(),
+              onChanged: (v) => setState(() => _selectedCategory = v!),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _field({required TextEditingController controller, required String hint, required IconData icon, TextInputType? keyboardType, int maxLines = 1}) {
     return TextField(controller: controller, style: const TextStyle(color: AppTheme.textPrimary), keyboardType: keyboardType, maxLines: maxLines, decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: AppTheme.textSecondary), prefixIcon: Icon(icon, color: AppTheme.primaryColor)));
   }

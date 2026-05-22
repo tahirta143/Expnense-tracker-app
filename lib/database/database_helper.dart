@@ -5,7 +5,7 @@ import '../models/category.dart';
 
 class DatabaseHelper {
   static const _databaseName = 'expense_tracker.db';
-  static const _databaseVersion = 3; // Incremented version
+  static const _databaseVersion = 3;
 
   // expenses table
   static const table = 'expenses';
@@ -16,7 +16,7 @@ class DatabaseHelper {
   static const columnDate = 'date';
   static const columnNotes = 'notes';
   static const columnIcon = 'icon';
-  static const columnIsIncome = 'is_income'; // New column
+  static const columnIsIncome = 'is_income';
 
   // categories table
   static const catTable = 'categories';
@@ -25,13 +25,8 @@ class DatabaseHelper {
   static const catColumnIcon = 'icon';
   static const catColumnColor = 'color';
 
-  // Singleton instance
   static final DatabaseHelper _instance = DatabaseHelper._internal();
-
-  factory DatabaseHelper() {
-    return _instance;
-  }
-
+  factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
 
   static Database? _database;
@@ -89,8 +84,28 @@ class DatabaseHelper {
       ''');
     }
     if (oldVersion < 3) {
-      await db.execute('ALTER TABLE $table ADD COLUMN $columnIsIncome INTEGER DEFAULT 0');
+      // Safely add is_income if it doesn't exist
+      var columns = await db.rawQuery('PRAGMA table_info($table)');
+      bool hasIncomeColumn = columns.any((c) => c['name'] == columnIsIncome);
+      if (!hasIncomeColumn) {
+        await db.execute('ALTER TABLE $table ADD COLUMN $columnIsIncome INTEGER DEFAULT 0');
+      }
     }
+  }
+
+  // Helper to filter map keys to only those that exist in the table schema
+  Future<Map<String, dynamic>> _filterSchema(String tableName, Map<String, dynamic> data) async {
+    final db = await database;
+    var columnsInfo = await db.rawQuery('PRAGMA table_info($tableName)');
+    var validColumns = columnsInfo.map((c) => c['name'] as String).toSet();
+    
+    Map<String, dynamic> filtered = {};
+    data.forEach((key, value) {
+      if (validColumns.contains(key)) {
+        filtered[key] = value;
+      }
+    });
+    return filtered;
   }
 
   // ─── Category CRUD ──────────────────────────────────────────────────────────
@@ -98,13 +113,11 @@ class DatabaseHelper {
   Future<List<ExpenseCategory>> getAllCategories() async {
     final db = await database;
     final maps = await db.query(catTable, orderBy: '$catColumnName ASC');
-    return maps
-        .map((m) => ExpenseCategory(
-              name: m[catColumnName] as String,
-              icon: m[catColumnIcon] as String,
-              color: m[catColumnColor] as int,
-            ))
-        .toList();
+    return maps.map((m) => ExpenseCategory(
+      name: m[catColumnName] as String,
+      icon: m[catColumnIcon] as String,
+      color: m[catColumnColor] as int,
+    )).toList();
   }
 
   Future<void> insertCategory(ExpenseCategory cat) async {
@@ -120,8 +133,7 @@ class DatabaseHelper {
     );
   }
 
-  Future<void> updateExpenseIconsForCategory(
-      String categoryName, String newIcon) async {
+  Future<void> updateExpenseIconsForCategory(String categoryName, String newIcon) async {
     final db = await database;
     await db.update(
       table,
@@ -133,16 +145,17 @@ class DatabaseHelper {
 
   Future<void> deleteCategory(String name) async {
     final db = await database;
-    await db.delete(catTable,
-        where: '$catColumnName = ?', whereArgs: [name]);
+    await db.delete(catTable, where: '$catColumnName = ?', whereArgs: [name]);
   }
 
   // Insert an expense
   Future<int> insertExpense(Expense expense) async {
     final db = await database;
+    // Safe insert: filter out any keys that might not exist in the schema
+    var data = await _filterSchema(table, expense.toMap());
     return await db.insert(
       table,
-      expense.toMap(),
+      data,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -151,13 +164,9 @@ class DatabaseHelper {
   Future<List<Expense>> getAllExpenses() async {
     final db = await database;
     final maps = await db.query(table, orderBy: '$columnDate DESC');
-    return List.generate(
-      maps.length,
-      (i) => Expense.fromMap(maps[i]),
-    );
+    return List.generate(maps.length, (i) => Expense.fromMap(maps[i]));
   }
 
-  // Get expenses by date range
   Future<List<Expense>> getExpensesByDateRange(DateTime startDate, DateTime endDate) async {
     final db = await database;
     final maps = await db.query(
@@ -166,13 +175,9 @@ class DatabaseHelper {
       whereArgs: [startDate.toIso8601String(), endDate.toIso8601String()],
       orderBy: '$columnDate DESC',
     );
-    return List.generate(
-      maps.length,
-      (i) => Expense.fromMap(maps[i]),
-    );
+    return List.generate(maps.length, (i) => Expense.fromMap(maps[i]));
   }
 
-  // Get expenses by category
   Future<List<Expense>> getExpensesByCategory(String category) async {
     final db = await database;
     final maps = await db.query(
@@ -181,13 +186,9 @@ class DatabaseHelper {
       whereArgs: [category],
       orderBy: '$columnDate DESC',
     );
-    return List.generate(
-      maps.length,
-      (i) => Expense.fromMap(maps[i]),
-    );
+    return List.generate(maps.length, (i) => Expense.fromMap(maps[i]));
   }
 
-  // Get transactions for current month
   Future<List<Expense>> getMonthlyExpenses() async {
     final now = DateTime.now();
     final startDate = DateTime(now.year, now.month, 1);
@@ -195,31 +196,16 @@ class DatabaseHelper {
     return getExpensesByDateRange(startDate, endDate);
   }
 
-  // Get total expenses for the month
   Future<double> getMonthlyTotal() async {
     final expenses = await getMonthlyExpenses();
-    double total = 0;
-    for (var expense in expenses) {
-      if (!expense.isIncome) {
-        total += expense.amount;
-      }
-    }
-    return total;
+    return expenses.where((e) => !e.isIncome).fold<double>(0.0, (sum, e) => sum + e.amount);
   }
 
-  // Get total income for the month
   Future<double> getMonthlyIncomeTotal() async {
     final transactions = await getMonthlyExpenses();
-    double total = 0;
-    for (var t in transactions) {
-      if (t.isIncome) {
-        total += t.amount;
-      }
-    }
-    return total;
+    return transactions.where((e) => e.isIncome).fold<double>(0.0, (sum, e) => sum + e.amount);
   }
 
-  // Get total by category
   Future<Map<String, double>> getTotalByCategory() async {
     final db = await database;
     final result = await db.rawQuery(
@@ -232,49 +218,34 @@ class DatabaseHelper {
 
     Map<String, double> categoryTotals = {};
     for (var row in result) {
-      categoryTotals[row['$columnCategory'] as String] =
-          (row['total'] as num).toDouble();
+      categoryTotals[row[columnCategory] as String] = (row['total'] as num).toDouble();
     }
     return categoryTotals;
   }
 
-  // Update an expense
   Future<int> updateExpense(Expense expense) async {
     final db = await database;
+    var data = await _filterSchema(table, expense.toMap());
     return await db.update(
       table,
-      expense.toMap(),
+      data,
       where: '$columnId = ?',
       whereArgs: [expense.id],
     );
   }
 
-  // Delete an expense
   Future<int> deleteExpense(int id) async {
     final db = await database;
-    return await db.delete(
-      table,
-      where: '$columnId = ?',
-      whereArgs: [id],
-    );
+    return await db.delete(table, where: '$columnId = ?', whereArgs: [id]);
   }
 
-  // Get expense by ID
   Future<Expense?> getExpenseById(int id) async {
     final db = await database;
-    final maps = await db.query(
-      table,
-      where: '$columnId = ?',
-      whereArgs: [id],
-    );
-
-    if (maps.isNotEmpty) {
-      return Expense.fromMap(maps.first);
-    }
+    final maps = await db.query(table, where: '$columnId = ?', whereArgs: [id]);
+    if (maps.isNotEmpty) return Expense.fromMap(maps.first);
     return null;
   }
 
-  // Search expenses
   Future<List<Expense>> searchExpenses(String query) async {
     final db = await database;
     final maps = await db.query(
@@ -283,19 +254,17 @@ class DatabaseHelper {
       whereArgs: ['%$query%', '%$query%'],
       orderBy: '$columnDate DESC',
     );
-    return List.generate(
-      maps.length,
-      (i) => Expense.fromMap(maps[i]),
-    );
+    return List.generate(maps.length, (i) => Expense.fromMap(maps[i]));
   }
 
-  // Clear all expenses
-  Future<int> deleteAllExpenses() async {
+  Future<void> clearAllData() async {
     final db = await database;
-    return await db.delete(table);
+    await db.transaction((txn) async {
+      await txn.delete(table);
+      await txn.delete(catTable);
+    });
   }
 
-  // Backup and Restore
   Future<Map<String, dynamic>> backupData() async {
     final db = await database;
     final expenses = await db.query(table);
@@ -315,13 +284,29 @@ class DatabaseHelper {
 
       if (data['categories'] != null) {
         for (var cat in data['categories']) {
-          await txn.insert(catTable, cat);
+          await txn.insert(catTable, Map<String, dynamic>.from(cat));
         }
       }
 
       if (data['expenses'] != null) {
         for (var exp in data['expenses']) {
-          await txn.insert(table, exp);
+          var map = Map<String, dynamic>.from(exp);
+          
+          if (!map.containsKey(columnIsIncome)) {
+            map[columnIsIncome] = 0;
+          }
+
+          var columnsInfo = await txn.rawQuery('PRAGMA table_info($table)');
+          var validColumns = columnsInfo.map((c) => c['name'] as String).toSet();
+          
+          Map<String, dynamic> filteredMap = {};
+          map.forEach((key, value) {
+            if (validColumns.contains(key)) {
+              filteredMap[key] = value;
+            }
+          });
+
+          await txn.insert(table, filteredMap);
         }
       }
     });

@@ -11,7 +11,7 @@ import '../widgets/category_chip.dart';
 class AddExpenseScreen extends StatefulWidget {
   final Expense? expense;
 
-  const AddExpenseScreen({Key? key, this.expense}) : super(key: key);
+  const AddExpenseScreen({super.key, this.expense});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();

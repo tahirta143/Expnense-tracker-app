@@ -65,7 +65,7 @@ class CategoryScreen extends StatelessWidget {
                     )
                   : ListView.builder(
                       padding: EdgeInsets.fromLTRB(
-                          sw * 0.04, 0, sw * 0.04, 100),
+                          sw * 0.04, 0, sw * 0.04, 110),
                       itemCount: categories.length,
                       itemBuilder: (context, index) {
                         final cat = categories[index];
