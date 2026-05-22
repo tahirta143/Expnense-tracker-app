@@ -8,6 +8,7 @@ class Expense {
   final DateTime date;
   final String? notes;
   final String? icon;
+  final bool isIncome;
 
   Expense({
     this.id,
@@ -17,6 +18,7 @@ class Expense {
     required this.date,
     this.notes,
     this.icon,
+    this.isIncome = false,
   });
 
   // Convert Expense to JSON for database storage
@@ -29,6 +31,7 @@ class Expense {
       'date': date.toIso8601String(),
       'notes': notes,
       'icon': icon ?? getCategoryIcon(category),
+      'is_income': isIncome ? 1 : 0,
     };
   }
 
@@ -42,6 +45,7 @@ class Expense {
       date: DateTime.parse(map['date'] as String),
       notes: map['notes'] as String?,
       icon: map['icon'] as String?,
+      isIncome: (map['is_income'] as int?) == 1,
     );
   }
 
@@ -55,6 +59,9 @@ class Expense {
       'Shopping': '🛍️',
       'Health': '🏥',
       'Education': '📚',
+      'Salary': '💵',
+      'Business': '📈',
+      'Investment': '🏦',
       'Other': '📌',
     };
     return icons[category] ?? '📌';
@@ -76,6 +83,6 @@ class Expense {
 
   @override
   String toString() {
-    return 'Expense(id: $id, title: $title, amount: $amount, category: $category, date: $date)';
+    return 'Expense(id: $id, title: $title, amount: $amount, category: $category, date: $date, isIncome: $isIncome)';
   }
 }

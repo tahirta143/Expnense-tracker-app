@@ -6,7 +6,7 @@ class ExpenseCard extends StatelessWidget {
   final Expense expense;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
-  final int index; // Added index for staggered animation
+  final int index;
 
   const ExpenseCard({
     Key? key,
@@ -19,11 +19,13 @@ class ExpenseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sw = MediaQuery.of(context).size.width;
-    // Scale icon box and fonts relative to screen width
     final iconSize = sw * 0.13;
     final titleFontSize = sw * 0.038;
     final subFontSize = sw * 0.030;
     final amountFontSize = sw * 0.036;
+
+    final Color amountColor = expense.isIncome ? AppTheme.primaryColor : AppTheme.errorColor;
+    final String prefix = expense.isIncome ? '+' : '-';
 
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 400 + (index * 50).clamp(0, 400)),
@@ -41,8 +43,7 @@ class ExpenseCard extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          margin: EdgeInsets.symmetric(
-              horizontal: sw * 0.04, vertical: sw * 0.018),
+          margin: EdgeInsets.symmetric(horizontal: sw * 0.04, vertical: sw * 0.018),
           padding: EdgeInsets.all(sw * 0.035),
           decoration: BoxDecoration(
             color: AppTheme.cardColor,
@@ -52,13 +53,11 @@ class ExpenseCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Icon box
               Container(
                 width: iconSize,
                 height: iconSize,
                 decoration: BoxDecoration(
-                  color: AppTheme.getCategoryColor(expense.category)
-                      .withValues(alpha: 0.2),
+                  color: AppTheme.getCategoryColor(expense.category).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -69,8 +68,6 @@ class ExpenseCard extends StatelessWidget {
                 ),
               ),
               SizedBox(width: sw * 0.03),
-
-              // Title + category + date
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,25 +83,19 @@ class ExpenseCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: sw * 0.01),
-                    // Category chip + date — use Flexible so they never overflow
                     Row(
                       children: [
                         Flexible(
                           child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: sw * 0.02,
-                              vertical: sw * 0.008,
-                            ),
+                            padding: EdgeInsets.symmetric(horizontal: sw * 0.02, vertical: sw * 0.008),
                             decoration: BoxDecoration(
-                              color: AppTheme.getCategoryColor(expense.category)
-                                  .withValues(alpha: 0.2),
+                              color: AppTheme.getCategoryColor(expense.category).withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               expense.category,
                               style: TextStyle(
-                                color: AppTheme.getCategoryColor(
-                                    expense.category),
+                                color: AppTheme.getCategoryColor(expense.category),
                                 fontSize: subFontSize,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -116,10 +107,7 @@ class ExpenseCard extends StatelessWidget {
                         SizedBox(width: sw * 0.02),
                         Text(
                           expense.formattedDate,
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: subFontSize,
-                          ),
+                          style: TextStyle(color: AppTheme.textPrimary, fontSize: subFontSize),
                         ),
                       ],
                     ),
@@ -127,15 +115,13 @@ class ExpenseCard extends StatelessWidget {
                 ),
               ),
               SizedBox(width: sw * 0.02),
-
-              // Amount + delete
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    expense.formattedAmount,
+                    '$prefix ${expense.formattedAmount}',
                     style: TextStyle(
-                      color: AppTheme.errorColor,
+                      color: amountColor,
                       fontSize: amountFontSize,
                       fontWeight: FontWeight.bold,
                     ),

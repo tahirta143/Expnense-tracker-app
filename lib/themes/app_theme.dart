@@ -23,6 +23,9 @@ class AppTheme {
     'Shopping': const Color(0xFFFF8B94),
     'Health': const Color(0xFFC7CEEA),
     'Education': const Color(0xFFB5EAD7),
+    'Salary': const Color(0xFF00D084),
+    'Business': const Color(0xFF4ECDC4),
+    'Investment': const Color(0xFFFFE66D),
     'Other': const Color(0xFFF7DC6F),
   };
 
@@ -33,7 +36,6 @@ class AppTheme {
       primaryColor: primaryColor,
       scaffoldBackgroundColor: backgroundColor,
       cardColor: cardColor,
-      // Global default text color = white
       textSelectionTheme: const TextSelectionThemeData(
         cursorColor: primaryColor,
       ),
@@ -84,7 +86,6 @@ class AppTheme {
         labelStyle: const TextStyle(color: textSecondary),
         hintStyle: const TextStyle(color: textSecondary),
       ),
-      // All text defaults to white; only use textSecondary explicitly where grey is intentional
       textTheme: const TextTheme(
         displayLarge:
             TextStyle(color: textPrimary, fontSize: 32, fontWeight: FontWeight.bold),
@@ -119,12 +120,6 @@ class AppTheme {
         onSecondary: Colors.black,
         onSurface: textPrimary,
         onError: textPrimary,
-      ),
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.android: ZoomPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-        },
       ),
     );
   }

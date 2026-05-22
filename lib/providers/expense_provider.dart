@@ -11,6 +11,9 @@ class ExpenseProvider extends ChangeNotifier {
   double _monthlyTotal = 0;
   double get monthlyTotal => _monthlyTotal;
 
+  double _monthlyIncomeTotal = 0;
+  double get monthlyIncomeTotal => _monthlyIncomeTotal;
+
   Map<String, double> _categoryTotals = {};
   Map<String, double> get categoryTotals => _categoryTotals;
 
@@ -46,6 +49,7 @@ class ExpenseProvider extends ChangeNotifier {
       date: expense.date,
       notes: expense.notes,
       icon: expense.icon,
+      isIncome: expense.isIncome,
     );
     _expenses.insert(0, newExpense);
     _expenses.sort((a, b) => b.date.compareTo(a.date));
@@ -84,6 +88,7 @@ class ExpenseProvider extends ChangeNotifier {
   // Update monthly total and category totals
   Future<void> _updateMonthlyTotal() async {
     _monthlyTotal = await _dbHelper.getMonthlyTotal();
+    _monthlyIncomeTotal = await _dbHelper.getMonthlyIncomeTotal();
     _categoryTotals = await _dbHelper.getTotalByCategory();
     notifyListeners();
   }

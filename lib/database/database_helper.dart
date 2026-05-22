@@ -5,7 +5,7 @@ import '../models/category.dart';
 
 class DatabaseHelper {
   static const _databaseName = 'expense_tracker.db';
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3; // Incremented version
 
   // expenses table
   static const table = 'expenses';
@@ -16,6 +16,7 @@ class DatabaseHelper {
   static const columnDate = 'date';
   static const columnNotes = 'notes';
   static const columnIcon = 'icon';
+  static const columnIsIncome = 'is_income'; // New column
 
   // categories table
   static const catTable = 'categories';
@@ -62,7 +63,8 @@ class DatabaseHelper {
         $columnCategory TEXT NOT NULL,
         $columnDate TEXT NOT NULL,
         $columnNotes TEXT,
-        $columnIcon TEXT
+        $columnIcon TEXT,
+        $columnIsIncome INTEGER DEFAULT 0
       )
     ''');
     await db.execute('''
@@ -85,6 +87,9 @@ class DatabaseHelper {
           $catColumnColor INTEGER NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $columnIsIncome INTEGER DEFAULT 0');
     }
   }
 
@@ -182,7 +187,7 @@ class DatabaseHelper {
     );
   }
 
-  // Get expenses for current month
+  // Get transactions for current month
   Future<List<Expense>> getMonthlyExpenses() async {
     final now = DateTime.now();
     final startDate = DateTime(now.year, now.month, 1);
@@ -195,7 +200,21 @@ class DatabaseHelper {
     final expenses = await getMonthlyExpenses();
     double total = 0;
     for (var expense in expenses) {
-      total += expense.amount;
+      if (!expense.isIncome) {
+        total += expense.amount;
+      }
+    }
+    return total;
+  }
+
+  // Get total income for the month
+  Future<double> getMonthlyIncomeTotal() async {
+    final transactions = await getMonthlyExpenses();
+    double total = 0;
+    for (var t in transactions) {
+      if (t.isIncome) {
+        total += t.amount;
+      }
     }
     return total;
   }
@@ -204,7 +223,7 @@ class DatabaseHelper {
   Future<Map<String, double>> getTotalByCategory() async {
     final db = await database;
     final result = await db.rawQuery(
-      'SELECT $columnCategory, SUM($columnAmount) as total FROM $table WHERE $columnDate >= ? AND $columnDate <= ? GROUP BY $columnCategory',
+      'SELECT $columnCategory, SUM($columnAmount) as total FROM $table WHERE $columnIsIncome = 0 AND $columnDate >= ? AND $columnDate <= ? GROUP BY $columnCategory',
       [
         DateTime(DateTime.now().year, DateTime.now().month, 1).toIso8601String(),
         DateTime(DateTime.now().year, DateTime.now().month + 1, 0).toIso8601String(),
@@ -274,5 +293,37 @@ class DatabaseHelper {
   Future<int> deleteAllExpenses() async {
     final db = await database;
     return await db.delete(table);
+  }
+
+  // Backup and Restore
+  Future<Map<String, dynamic>> backupData() async {
+    final db = await database;
+    final expenses = await db.query(table);
+    final categories = await db.query(catTable);
+    return {
+      'expenses': expenses,
+      'categories': categories,
+      'version': _databaseVersion,
+    };
+  }
+
+  Future<void> restoreData(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete(table);
+      await txn.delete(catTable);
+
+      if (data['categories'] != null) {
+        for (var cat in data['categories']) {
+          await txn.insert(catTable, cat);
+        }
+      }
+
+      if (data['expenses'] != null) {
+        for (var exp in data['expenses']) {
+          await txn.insert(table, exp);
+        }
+      }
+    });
   }
 }
