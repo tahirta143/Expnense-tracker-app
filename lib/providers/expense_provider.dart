@@ -121,4 +121,8 @@ class ExpenseProvider extends ChangeNotifier {
     _selectedDate = date;
     notifyListeners();
   }
+
+  Future<List<Expense>> getAllTransactions() async {
+    return await _dbHelper.getAllExpenses();
+  }
 }

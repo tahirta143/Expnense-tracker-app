@@ -11,7 +11,9 @@ import '../themes/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/curved_bottom_nav.dart';
 import '../widgets/expense_card.dart';
+import '../widgets/ai_insight_card.dart';
 import '../utils/backup_helper.dart';
+import '../services/ai_service.dart';
 import 'expense_list_screen.dart';
 import 'reports_screen.dart';
 import 'category_screen.dart';
@@ -32,6 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
   double _fabX = -1;
   double _fabY = -1;
 
+  String _aiInsights = 'Tap refresh to generate AI insights based on your monthly transactions.';
+  bool _aiLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +44,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       context.read<ExpenseProvider>().loadMonthlyExpenses();
       context.read<CategoryProvider>().loadCategories();
+      
+      // Fetch insights if data exists
+      final expenseProvider = context.read<ExpenseProvider>();
+      if (expenseProvider.expenses.isNotEmpty) {
+        _fetchAIInsights();
+      }
     });
   }
 
@@ -46,6 +57,37 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _fetchAIInsights() async {
+    final provider = context.read<ExpenseProvider>();
+    if (provider.expenses.isEmpty) {
+      setState(() {
+        _aiInsights = 'Add some transactions to get personalized financial advice.';
+      });
+      return;
+    }
+
+    setState(() => _aiLoading = true);
+    try {
+      final insights = await AIService().getFinancialInsights(provider.expenses);
+      setState(() {
+        _aiInsights = insights;
+        _aiLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _aiInsights = 'Error connecting to AI advisor. Check your internet and API key.';
+        _aiLoading = false;
+      });
+    }
+  }
+
+  void _showAIChatSheet(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => const _AIChatDialog(),
+    );
   }
 
   void _showAddExpenseSheet() {
@@ -88,20 +130,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    GestureDetector(
-                      onTap: () => setState(() => _searchActive = true),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.search,
-                          color: AppTheme.primaryColor,
-                          size: 20,
-                        ),
-                      ),
+                    IconButton(
+                      onPressed: () => _showAIChatSheet(context),
+                      icon: const Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryColor),
+                      tooltip: 'Ask AI',
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() => _searchActive = true),
+                      icon: const Icon(Icons.search, color: AppTheme.primaryColor),
+                      tooltip: 'Search',
                     ),
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert, color: AppTheme.primaryColor),
@@ -398,6 +435,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text(monthName, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
           ),
           const SizedBox(height: 12),
+          AIInsightCard(
+            insights: _aiInsights,
+            isLoading: _aiLoading,
+            onRefresh: _fetchAIInsights,
+          ),
+          const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GridView.count(
@@ -815,5 +858,197 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
   Widget _label(String text) => Text(text, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600));
   Widget _field({required TextEditingController controller, required String hint, required IconData icon, TextInputType? keyboardType, int maxLines = 1}) {
     return TextField(controller: controller, style: const TextStyle(color: AppTheme.textPrimary), keyboardType: keyboardType, maxLines: maxLines, decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: AppTheme.textSecondary), prefixIcon: Icon(icon, color: AppTheme.primaryColor)));
+  }
+}
+
+class _AIChatDialog extends StatefulWidget {
+  const _AIChatDialog();
+
+  @override
+  State<_AIChatDialog> createState() => _AIChatDialogState();
+}
+
+class _AIChatDialogState extends State<_AIChatDialog> {
+  final TextEditingController _queryController = TextEditingController();
+  final List<Map<String, String>> _messages = [];
+  bool _isTyping = false;
+  final ScrollController _scrollController = ScrollController();
+
+  void _askAI() async {
+    final question = _queryController.text.trim();
+    if (question.isEmpty) return;
+    
+    _queryController.clear();
+    final provider = context.read<ExpenseProvider>();
+    
+    setState(() {
+      _messages.add({'role': 'user', 'content': question});
+      _isTyping = true;
+    });
+    
+    _scrollToBottom();
+    
+    final allTransactions = await provider.getAllTransactions();
+    final result = await AIService().askAI(allTransactions, question);
+    
+    if (mounted) {
+      setState(() {
+        _messages.add({'role': 'assistant', 'content': result});
+        _isTyping = false;
+      });
+      _scrollToBottom();
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sh = MediaQuery.of(context).size.height;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          height: sh * 0.75, // Puts a limit on the dialog height
+          color: AppTheme.backgroundColor,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            resizeToAvoidBottomInset: true, // Automatically handles keyboard
+            body: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryColor, size: 20),
+                          SizedBox(width: 10),
+                          Text(
+                            'AI Assistant',
+                            style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              AIService().clearHistory();
+                              setState(() => _messages.clear());
+                            },
+                            icon: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary, size: 20),
+                            tooltip: 'Clear Chat',
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close_rounded, color: AppTheme.textSecondary, size: 20),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(color: AppTheme.borderColor, height: 1),
+                
+                // Chat Messages
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.isEmpty ? 1 : _messages.length,
+                    itemBuilder: (context, index) {
+                      if (_messages.isEmpty) {
+                        return const Text(
+                          'Ask me about your financial health, monthly summaries, or specific spending habits.\n\nExample:\n• Summarize my transactions for this month.\n• How is my daily spending trend?\n• Can I afford a Rs 10,000 expense next month?',
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontStyle: FontStyle.italic),
+                        );
+                      }
+                      
+                      final msg = _messages[index];
+                      final isUser = msg['role'] == 'user';
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isUser ? AppTheme.primaryColor.withValues(alpha: 0.2) : AppTheme.cardColor,
+                            borderRadius: BorderRadius.circular(12).copyWith(
+                              bottomRight: isUser ? Radius.zero : null,
+                              bottomLeft: isUser ? null : Radius.zero,
+                            ),
+                            border: Border.all(color: isUser ? AppTheme.primaryColor.withValues(alpha: 0.3) : AppTheme.borderColor),
+                          ),
+                          child: Text(
+                            msg['content']!,
+                            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, height: 1.4),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                
+                if (_isTyping)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+
+                // Input Area
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.surfaceColor,
+                    border: Border(top: BorderSide(color: AppTheme.borderColor)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _queryController,
+                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Ask me anything...',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                            filled: true,
+                            fillColor: AppTheme.cardColor,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
+                          onSubmitted: (_) => _askAI(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _isTyping ? null : _askAI,
+                        icon: Icon(Icons.send_rounded, color: _isTyping ? AppTheme.textSecondary : AppTheme.primaryColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

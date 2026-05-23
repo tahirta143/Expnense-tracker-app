@@ -26,7 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Manage Your Income',
       description: 'Keep track of multiple income sources and maintain a healthy financial balance.',
       lottiePath: 'assets/images/Coins.json',
-      color: Colors.green,
+      color: AppTheme.primaryColor,
     ),
     OnboardingItem(
       title: 'Visual Insights',
