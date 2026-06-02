@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _aiInsights = 'Tap refresh to generate AI insights based on your monthly transactions.';
   bool _aiLoading = false;
+  bool _showAIInsights = true;
 
   @override
   void initState() {
@@ -434,12 +435,15 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(monthName, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
           ),
-          const SizedBox(height: 12),
-          AIInsightCard(
-            insights: _aiInsights,
-            isLoading: _aiLoading,
-            onRefresh: _fetchAIInsights,
-          ),
+          if (_showAIInsights) ...[
+            const SizedBox(height: 12),
+            AIInsightCard(
+              insights: _aiInsights,
+              isLoading: _aiLoading,
+              onRefresh: _fetchAIInsights,
+              onClose: () => setState(() => _showAIInsights = false),
+            ),
+          ],
           const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),

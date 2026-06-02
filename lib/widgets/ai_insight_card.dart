@@ -5,12 +5,14 @@ class AIInsightCard extends StatelessWidget {
   final String insights;
   final bool isLoading;
   final VoidCallback onRefresh;
+  final VoidCallback? onClose;
 
   const AIInsightCard({
     super.key,
     required this.insights,
     required this.isLoading,
     required this.onRefresh,
+    this.onClose,
   });
 
   @override
@@ -55,9 +57,20 @@ class AIInsightCard extends StatelessWidget {
                 ],
               ),
               if (!isLoading)
-                GestureDetector(
-                  onTap: onRefresh,
-                  child: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary, size: 18),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: onRefresh,
+                      child: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary, size: 18),
+                    ),
+                    if (onClose != null) ...[
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: onClose,
+                        child: const Icon(Icons.close_rounded, color: AppTheme.textSecondary, size: 18),
+                      ),
+                    ],
+                  ],
                 ),
             ],
           ),
