@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../models/expense.dart';
 import '../models/category.dart';
 import '../providers/category_provider.dart';
+import '../providers/wallet_provider.dart';
+import '../models/wallet.dart';
 import '../themes/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/category_chip.dart';
@@ -23,6 +25,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   late TextEditingController _notesController;
   late DateTime _selectedDate;
   late String _selectedCategory;
+  int? _selectedWalletId;
 
   @override
   void initState() {
@@ -32,6 +35,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         TextEditingController(text: widget.expense?.amount.toString() ?? '');
     _notesController = TextEditingController(text: widget.expense?.notes ?? '');
     _selectedDate = widget.expense?.date ?? DateTime.now();
+    _selectedWalletId = widget.expense?.walletId;
     
     // Set initial category safely
     final List<ExpenseCategory> categories = context.read<CategoryProvider>().categories;
@@ -41,6 +45,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       _selectedCategory = categories.first.name;
     } else {
       _selectedCategory = 'Other';
+    }
+
+    // Set initial wallet if not editing
+    if (widget.expense == null) {
+      final wallets = context.read<WalletProvider>().wallets;
+      if (wallets.isNotEmpty) {
+        _selectedWalletId = wallets.first.id;
+      }
     }
   }
 
@@ -58,17 +70,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppTheme.primaryColor,
-              surface: AppTheme.cardColor,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       setState(() {
@@ -103,6 +104,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       date: _selectedDate,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
       icon: selectedCat.icon,
+      walletId: _selectedWalletId,
     );
 
     Navigator.pop(context, expense);
@@ -110,8 +112,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: CustomAppBar(
         title: widget.expense != null ? 'Edit Expense' : 'Add Expense',
       ),
@@ -121,10 +124,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Title Field
-            const Text(
+            Text(
               'Expense Title *',
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: theme.textTheme.titleSmall?.color,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -132,10 +135,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _titleController,
-              style: const TextStyle(color: AppTheme.textPrimary),
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color),
               decoration: InputDecoration(
                 hintText: 'e.g., Coffee, Groceries',
-                hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
                 prefixIcon: const Icon(
                   Icons.label_outline,
                   color: AppTheme.primaryColor,
@@ -145,10 +148,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             const SizedBox(height: 20),
 
             // Amount Field
-            const Text(
+            Text(
               'Amount *',
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: theme.textTheme.titleSmall?.color,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -156,12 +159,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
-              style: const TextStyle(color: AppTheme.textPrimary),
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 hintText: '0.00',
-                hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
                 prefixIcon: const Icon(
                   Icons.attach_money,
                   color: AppTheme.primaryColor,
@@ -171,10 +174,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             const SizedBox(height: 20),
 
             // Category Selection
-            const Text(
+            Text(
               'Category',
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: theme.textTheme.titleSmall?.color,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -221,11 +224,57 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ),
             const SizedBox(height: 20),
 
+            // Wallet Selection
+            Text(
+              'Select Wallet',
+              style: TextStyle(
+                color: theme.textTheme.titleSmall?.color,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Consumer<WalletProvider>(
+              builder: (context, walletProvider, _) {
+                final wallets = walletProvider.wallets;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    border: Border.all(color: theme.dividerColor),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: _selectedWalletId,
+                      dropdownColor: theme.cardColor,
+                      isExpanded: true,
+                      items: wallets.map((wallet) {
+                        return DropdownMenuItem<int>(
+                          value: wallet.id,
+                          child: Text(
+                            '${wallet.icon} ${wallet.name}',
+                            style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedWalletId = val;
+                        });
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+
             // Date Picker
-            const Text(
+            Text(
               'Date',
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: theme.textTheme.titleSmall?.color,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -236,8 +285,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppTheme.cardColor,
-                  border: Border.all(color: AppTheme.borderColor),
+                  color: theme.cardColor,
+                  border: Border.all(color: theme.dividerColor),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -250,15 +299,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     const SizedBox(width: 12),
                     Text(
                       DateFormat('MMM d, yyyy').format(_selectedDate),
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
                         fontSize: 14,
                       ),
                     ),
                     const Spacer(),
-                    const Icon(
+                    Icon(
                       Icons.arrow_drop_down,
-                      color: AppTheme.textSecondary,
+                      color: theme.textTheme.bodySmall?.color,
                     ),
                   ],
                 ),
@@ -267,10 +316,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             const SizedBox(height: 20),
 
             // Notes Field
-            const Text(
+            Text(
               'Notes (Optional)',
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: theme.textTheme.titleSmall?.color,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -278,11 +327,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _notesController,
-              style: const TextStyle(color: AppTheme.textPrimary),
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color),
               maxLines: 3,
               decoration: InputDecoration(
                 hintText: 'Add any additional notes...',
-                hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
                 prefixIcon: const Icon(
                   Icons.notes,
                   color: AppTheme.primaryColor,

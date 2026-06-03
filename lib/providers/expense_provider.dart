@@ -1,9 +1,15 @@
 import 'package:flutter/foundation.dart';
 import '../database/database_helper.dart';
 import '../models/expense.dart';
+import 'wallet_provider.dart';
 
 class ExpenseProvider extends ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  WalletProvider? _walletProvider;
+
+  void updateWalletProvider(WalletProvider? provider) {
+    _walletProvider = provider;
+  }
 
   List<Expense> _expenses = [];
   List<Expense> get expenses => _expenses;
@@ -41,6 +47,17 @@ class ExpenseProvider extends ChangeNotifier {
   // Add new expense
   Future<void> addExpense(Expense expense) async {
     final id = await _dbHelper.insertExpense(expense);
+    
+    // Update wallet balance if walletId is provided
+    if (expense.walletId != null) {
+      await _dbHelper.updateWalletBalance(
+        expense.walletId!,
+        expense.amount,
+        isAddition: expense.isIncome,
+      );
+      await _walletProvider?.loadWallets();
+    }
+
     final newExpense = Expense(
       id: id,
       title: expense.title,
@@ -50,6 +67,8 @@ class ExpenseProvider extends ChangeNotifier {
       notes: expense.notes,
       icon: expense.icon,
       isIncome: expense.isIncome,
+      walletId: expense.walletId,
+      toWalletId: expense.toWalletId,
     );
     _expenses.insert(0, newExpense);
     _expenses.sort((a, b) => b.date.compareTo(a.date));
@@ -74,6 +93,21 @@ class ExpenseProvider extends ChangeNotifier {
 
   // Delete expense
   Future<void> deleteExpense(int id) async {
+    final expense = await _dbHelper.getExpenseById(id);
+    if (expense != null && expense.walletId != null) {
+      // Revert balance change
+      if (expense.isTransfer) {
+        await _dbHelper.updateWalletBalance(expense.walletId!, expense.amount, isAddition: true);
+        await _dbHelper.updateWalletBalance(expense.toWalletId!, expense.amount, isAddition: false);
+      } else {
+        await _dbHelper.updateWalletBalance(
+          expense.walletId!,
+          expense.amount,
+          isAddition: !expense.isIncome,
+        );
+      }
+      await _walletProvider?.loadWallets();
+    }
     await _dbHelper.deleteExpense(id);
     _expenses.removeWhere((e) => e.id == id);
     notifyListeners();

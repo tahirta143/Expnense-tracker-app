@@ -31,6 +31,9 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Consumer2<ExpenseProvider, CategoryProvider>(
       builder: (context, expenseProvider, categoryProvider, _) {
         final List<ExpenseCategory> categories = categoryProvider.categories;
@@ -70,11 +73,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.primaryColor : AppTheme.cardColor,
+                            color: isSelected ? AppTheme.primaryColor : theme.cardColor,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor),
+                            border: Border.all(color: isSelected ? AppTheme.primaryColor : theme.dividerColor),
+                            boxShadow: !isSelected && !isDark ? [
+                              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                            ] : [],
                           ),
-                          child: Text(type, textAlign: TextAlign.center, style: TextStyle(color: isSelected ? Colors.black : AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 12)),
+                          child: Text(type, textAlign: TextAlign.center, style: TextStyle(color: isSelected ? Colors.black : theme.textTheme.titleMedium?.color, fontWeight: FontWeight.bold, fontSize: 12)),
                         ),
                       ),
                     );
@@ -96,11 +102,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.primaryColor : AppTheme.cardColor,
+                            color: isSelected ? AppTheme.primaryColor : theme.cardColor,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor),
+                            border: Border.all(color: isSelected ? AppTheme.primaryColor : theme.dividerColor),
+                            boxShadow: !isSelected && !isDark ? [
+                              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                            ] : [],
                           ),
-                          child: Text(filter, style: TextStyle(color: isSelected ? Colors.black : AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                          child: Text(filter, style: TextStyle(color: isSelected ? Colors.black : theme.textTheme.bodySmall?.color, fontSize: 12, fontWeight: FontWeight.w600)),
                         ),
                       ),
                     );
@@ -116,7 +125,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                           children: [
                             const Text('📭', style: TextStyle(fontSize: 64)),
                             const SizedBox(height: 16),
-                            Text('No transactions found', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
+                            Text('No transactions found', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 16)),
                           ],
                         ),
                       )
@@ -143,12 +152,12 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                               final confirmed = await showDialog<bool>(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
-                                  backgroundColor: AppTheme.cardColor,
+                                  backgroundColor: theme.cardColor,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  title: const Text('Delete Transaction', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                                  content: const Text('Are you sure you want to delete this transaction?', style: TextStyle(color: AppTheme.textSecondary)),
+                                  title: Text('Delete Transaction', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontWeight: FontWeight.bold)),
+                                  content: Text('Are you sure you want to delete this transaction?', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
                                   actions: [
-                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodySmall?.color))),
                                     TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppTheme.errorColor))),
                                   ],
                                 ),
@@ -241,22 +250,23 @@ class _EditExpenseSheetState extends State<_EditExpenseSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (_, scrollController) => Container(
-        decoration: const BoxDecoration(color: AppTheme.backgroundColor, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        decoration: BoxDecoration(color: theme.scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
         child: Column(
           children: [
-            Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: AppTheme.borderColor, borderRadius: BorderRadius.circular(2))),
+            Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: theme.dividerColor, borderRadius: BorderRadius.circular(2))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Edit Transaction', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-                  GestureDetector(onTap: () => Navigator.pop(context), child: const Icon(Icons.close, color: AppTheme.textSecondary)),
+                  Text('Edit Transaction', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 18, fontWeight: FontWeight.bold)),
+                  GestureDetector(onTap: () => Navigator.pop(context), child: Icon(Icons.close, color: theme.textTheme.bodySmall?.color)),
                 ],
               ),
             ),
@@ -268,35 +278,40 @@ class _EditExpenseSheetState extends State<_EditExpenseSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _label('Title *'),
+                    _label(context, 'Title *'),
                     const SizedBox(height: 8),
-                    _field(controller: _titleController, hint: 'Title', icon: Icons.label_outline),
+                    _field(context, controller: _titleController, hint: 'Title', icon: Icons.label_outline),
                     const SizedBox(height: 16),
-                    _label('Amount *'),
+                    _label(context, 'Amount *'),
                     const SizedBox(height: 8),
-                    _field(controller: _amountController, hint: '0.00', icon: Icons.attach_money, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                    _field(context, controller: _amountController, hint: '0.00', icon: Icons.attach_money, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
                     const SizedBox(height: 16),
-                    _label('Category'),
+                    _label(context, 'Category'),
                     const SizedBox(height: 10),
-                    _isIncome ? _buildIncomeCategoryDropdown() : _buildExpenseCategoryDropdown(),
+                    _isIncome ? _buildIncomeCategoryDropdown(context) : _buildExpenseCategoryDropdown(context),
                     const SizedBox(height: 16),
-                    _label('Date'),
+                    _label(context, 'Date'),
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: () async {
-                        final picked = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime.now());
+                        final picked = await showDatePicker(
+                          context: context, 
+                          initialDate: _selectedDate, 
+                          firstDate: DateTime(2020), 
+                          lastDate: DateTime.now()
+                        );
                         if (picked != null) setState(() => _selectedDate = picked);
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(color: AppTheme.cardColor, border: Border.all(color: AppTheme.borderColor), borderRadius: BorderRadius.circular(12)),
-                        child: Row(children: [const Icon(Icons.calendar_today, color: AppTheme.primaryColor, size: 18), const SizedBox(width: 10), Text(DateFormat('MMM d, yyyy').format(_selectedDate), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)), const Spacer(), const Icon(Icons.arrow_drop_down, color: AppTheme.textSecondary)]),
+                        decoration: BoxDecoration(color: theme.cardColor, border: Border.all(color: theme.dividerColor), borderRadius: BorderRadius.circular(12)),
+                        child: Row(children: [const Icon(Icons.calendar_today, color: AppTheme.primaryColor, size: 18), const SizedBox(width: 10), Text(DateFormat('MMM d, yyyy').format(_selectedDate), style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 14)), const Spacer(), Icon(Icons.arrow_drop_down, color: theme.textTheme.bodySmall?.color)]),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _label('Notes (Optional)'),
+                    _label(context, 'Notes (Optional)'),
                     const SizedBox(height: 8),
-                    _field(controller: _notesController, hint: 'Add notes...', icon: Icons.notes, maxLines: 3),
+                    _field(context, controller: _notesController, hint: 'Add notes...', icon: Icons.notes, maxLines: 3),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -320,40 +335,42 @@ class _EditExpenseSheetState extends State<_EditExpenseSheet> {
     );
   }
 
-  Widget _label(String text) => Text(text, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600));
+  Widget _label(BuildContext context, String text) => Text(text, style: TextStyle(color: Theme.of(context).textTheme.titleSmall?.color, fontSize: 13, fontWeight: FontWeight.w600));
 
-  Widget _buildIncomeCategoryDropdown() {
+  Widget _buildIncomeCategoryDropdown(BuildContext context) {
+    final theme = Theme.of(context);
     final incomeCats = ['Salary', 'Business', 'Investment', 'Other'];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.borderColor)),
+      decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: theme.dividerColor)),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedCategory,
           isExpanded: true,
-          dropdownColor: AppTheme.cardColor,
-          items: incomeCats.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(color: AppTheme.textPrimary)))).toList(),
+          dropdownColor: theme.cardColor,
+          items: incomeCats.map((c) => DropdownMenuItem(value: c, child: Text(c, style: TextStyle(color: theme.textTheme.bodyMedium?.color)))).toList(),
           onChanged: (v) => setState(() => _selectedCategory = v!),
         ),
       ),
     );
   }
 
-  Widget _buildExpenseCategoryDropdown() {
+  Widget _buildExpenseCategoryDropdown(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer<CategoryProvider>(
       builder: (context, catProvider, _) {
         final cats = catProvider.categories;
-        if (cats.isEmpty) return const Text('No categories', style: TextStyle(color: AppTheme.textSecondary));
+        if (cats.isEmpty) return Text('No categories', style: TextStyle(color: theme.textTheme.bodySmall?.color));
         if (!cats.any((c) => c.name == _selectedCategory)) _selectedCategory = cats.first.name;
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.borderColor)),
+          decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: theme.dividerColor)),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedCategory,
               isExpanded: true,
-              dropdownColor: AppTheme.cardColor,
-              items: cats.map((c) => DropdownMenuItem(value: c.name, child: Row(children: [Text(c.icon), const SizedBox(width: 10), Text(c.name, style: const TextStyle(color: AppTheme.textPrimary))]))).toList(),
+              dropdownColor: theme.cardColor,
+              items: cats.map((c) => DropdownMenuItem(value: c.name, child: Row(children: [Text(c.icon), const SizedBox(width: 10), Text(c.name, style: TextStyle(color: theme.textTheme.bodyMedium?.color))]))).toList(),
               onChanged: (v) => setState(() => _selectedCategory = v!),
             ),
           ),
@@ -362,7 +379,8 @@ class _EditExpenseSheetState extends State<_EditExpenseSheet> {
     );
   }
 
-  Widget _field({required TextEditingController controller, required String hint, required IconData icon, TextInputType? keyboardType, int maxLines = 1}) {
-    return TextField(controller: controller, style: const TextStyle(color: AppTheme.textPrimary), keyboardType: keyboardType, maxLines: maxLines, decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: AppTheme.textSecondary), prefixIcon: Icon(icon, color: AppTheme.primaryColor)));
+  Widget _field(BuildContext context, {required TextEditingController controller, required String hint, required IconData icon, TextInputType? keyboardType, int maxLines = 1}) {
+    final theme = Theme.of(context);
+    return TextField(controller: controller, style: TextStyle(color: theme.textTheme.bodyMedium?.color), keyboardType: keyboardType, maxLines: maxLines, decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color), prefixIcon: Icon(icon, color: AppTheme.primaryColor)));
   }
 }

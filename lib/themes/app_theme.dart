@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Colors from the design - Dark theme with green accents
+  // Colors for Dark Theme (Existing)
   static const Color primaryColor = Color(0xFF00D084);
   static const Color primaryDark = Color(0xFF008F5A);
   static const Color backgroundColor = Color(0xFF121212);
@@ -11,8 +11,15 @@ class AppTheme {
   static const Color textSecondary = Color(0xFFB0B0B0);
   static const Color borderColor = Color(0xFF3A3A3A);
   static const Color errorColor = Color(0xFFFF6B6B);
-  static const Color successColor = Color(0xFF00D084);
-  static const Color warningColor = Color(0xFFFFB84D);
+
+  // Colors for Light Theme (New - based on image)
+  static const Color lightBackground = Color(0xFFF8F9FA);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color lightTextPrimary = Color(0xFF1A1A1A);
+  static const Color lightTextSecondary = Color(0xFF707070);
+  static const Color lightBorder = Color(0xFFE0E0E0);
+  static const Color lightShadow = Color(0x1A000000);
 
   // Category colors
   static Map<String, Color> categoryColors = {
@@ -28,6 +35,67 @@ class AppTheme {
     'Investment': const Color(0xFFFFE66D),
     'Other': const Color(0xFFF7DC6F),
   };
+
+  static ThemeData getLightTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: lightBackground,
+      cardColor: lightCard,
+      dividerColor: lightBorder,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: lightSurface,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: TextStyle(
+          color: lightTextPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+        iconTheme: IconThemeData(color: primaryColor),
+      ),
+      colorScheme: const ColorScheme.light(
+        primary: primaryColor,
+        secondary: primaryColor,
+        surface: lightSurface,
+        error: errorColor,
+        onPrimary: Colors.white,
+        onSurface: lightTextPrimary,
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: lightSurface,
+        elevation: 8,
+        surfaceTintColor: Colors.transparent,
+        textStyle: TextStyle(color: lightTextPrimary),
+        labelTextStyle: WidgetStatePropertyAll(TextStyle(color: lightTextPrimary)),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: lightSurface,
+        headerBackgroundColor: primaryColor,
+        headerForegroundColor: Colors.white,
+        dayStyle: const TextStyle(color: lightTextPrimary),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: lightSurface,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(color: lightTextPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+        contentTextStyle: TextStyle(color: lightTextSecondary, fontSize: 14),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: lightSurface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      ),
+      textTheme: const TextTheme(
+        headlineMedium: TextStyle(color: lightTextPrimary, fontSize: 22, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(color: lightTextPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(color: lightTextPrimary, fontSize: 16),
+        bodyMedium: TextStyle(color: lightTextPrimary, fontSize: 14),
+        bodySmall: TextStyle(color: lightTextSecondary, fontSize: 12),
+      ),
+    );
+  }
 
   static ThemeData getDarkTheme() {
     return ThemeData(
@@ -120,6 +188,29 @@ class AppTheme {
         onSecondary: Colors.black,
         onSurface: textPrimary,
         onError: textPrimary,
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: cardColor,
+        elevation: 8,
+        surfaceTintColor: Colors.transparent,
+        textStyle: TextStyle(color: textPrimary),
+        labelTextStyle: WidgetStatePropertyAll(TextStyle(color: textPrimary)),
+      ),
+      datePickerTheme: const DatePickerThemeData(
+        backgroundColor: cardColor,
+        headerBackgroundColor: primaryColor,
+        headerForegroundColor: Colors.black,
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: cardColor,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(color: textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+        contentTextStyle: TextStyle(color: textSecondary, fontSize: 14),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: backgroundColor,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       ),
     );
   }

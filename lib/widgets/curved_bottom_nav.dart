@@ -15,6 +15,8 @@ class CurvedBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final mq = MediaQuery.of(context);
     final sw = mq.size.width;
     final itemCount = items.length;
@@ -39,11 +41,11 @@ class CurvedBottomNavigationBar extends StatelessWidget {
         child: Container(
           height: barH,
           decoration: BoxDecoration(
-            color: AppTheme.surfaceColor,
+            color: theme.appBarTheme.backgroundColor,
             borderRadius: BorderRadius.circular(sw * 0.1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.35),
+                color: isDark ? Colors.black.withValues(alpha: 0.35) : Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -68,7 +70,7 @@ class CurvedBottomNavigationBar extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: selected
                           ? AppTheme.primaryColor.withValues(alpha: 0.18)
-                          : AppTheme.cardColor.withValues(alpha: 0.6),
+                          : (isDark ? theme.cardColor.withValues(alpha: 0.6) : Colors.grey[100]),
                       borderRadius: BorderRadius.circular(radius),
                       border: selected
                           ? Border.all(
@@ -107,7 +109,7 @@ class CurvedBottomNavigationBar extends StatelessWidget {
                           : Center(
                         child: Icon(
                           icon,
-                          color: AppTheme.textSecondary,
+                          color: isDark ? theme.textTheme.bodySmall?.color : Colors.grey[500],
                           size: iconSize,
                         ),
                       ),

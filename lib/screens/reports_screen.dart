@@ -20,6 +20,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Consumer<ExpenseProvider>(
       builder: (context, provider, _) {
         return TweenAnimationBuilder<double>(
@@ -46,15 +49,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: selected ? activeColor : AppTheme.cardColor,
+                            color: selected ? activeColor : theme.cardColor,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: selected ? activeColor : AppTheme.borderColor),
+                            border: Border.all(color: selected ? activeColor : theme.dividerColor),
+                            boxShadow: !selected && !isDark ? [
+                              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                            ] : [],
                           ),
                           child: Text(
                             type,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: selected ? Colors.black : AppTheme.textPrimary,
+                              color: selected ? Colors.black : theme.textTheme.titleMedium?.color,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -84,15 +90,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: selected ? AppTheme.primaryColor : AppTheme.cardColor,
+                            color: selected ? AppTheme.primaryColor : theme.cardColor,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: selected ? AppTheme.primaryColor : AppTheme.borderColor),
+                            border: Border.all(color: selected ? AppTheme.primaryColor : theme.dividerColor),
+                            boxShadow: !selected && !isDark ? [
+                              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                            ] : [],
                           ),
                           child: Text(
                             labels[mode]!,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: selected ? Colors.black : AppTheme.textPrimary,
+                              color: selected ? Colors.black : theme.textTheme.titleSmall?.color,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -135,6 +144,8 @@ class _PeriodReport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final transactions = provider.expenses;
     final Map<String, Map<String, double>> dataPoints = {}; // key -> {income: val, expense: val}
 
@@ -196,13 +207,13 @@ class _PeriodReport extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Overview', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
+              Text('Overview', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 15, fontWeight: FontWeight.bold)),
               if (typeFilter == 'All')
                 Row(
                   children: [
-                    _legendItem('Income', AppTheme.primaryColor),
+                    _legendItem(context, 'Income', AppTheme.primaryColor),
                     const SizedBox(width: 8),
-                    _legendItem('Expense', AppTheme.errorColor),
+                    _legendItem(context, 'Expense', AppTheme.errorColor),
                   ],
                 ),
             ],
@@ -210,13 +221,27 @@ class _PeriodReport extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-            decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.borderColor)),
+            decoration: BoxDecoration(
+              color: theme.cardColor, 
+              borderRadius: BorderRadius.circular(16), 
+              border: null,
+              boxShadow: isDark ? [] : [
+                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
+              ],
+            ),
             child: SizedBox(
               height: 200,
               child: BarChart(
                 BarChartData(
                   borderData: FlBorderData(show: false),
-                  gridData: const FlGridData(show: true, drawVerticalLine: false),
+                  gridData: FlGridData(
+                    show: true, 
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                      strokeWidth: 1,
+                    ),
+                  ),
                   titlesData: FlTitlesData(
                     topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -226,11 +251,11 @@ class _PeriodReport extends StatelessWidget {
                         getTitlesWidget: (val, meta) {
                           final idx = val.toInt();
                           if (idx < 0 || idx >= chartKeys.length) return const SizedBox.shrink();
-                          return Padding(padding: const EdgeInsets.only(top: 4), child: Text(_shortLabel(chartKeys[idx]), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 9)));
+                          return Padding(padding: const EdgeInsets.only(top: 4), child: Text(_shortLabel(chartKeys[idx]), style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 9)));
                         },
                       ),
                     ),
-                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 55, getTitlesWidget: (val, meta) => Text('Rs ${val.toInt()}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 9), maxLines: 1, softWrap: false))),
+                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 55, getTitlesWidget: (val, meta) => Text('Rs ${val.toInt()}', style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 9), maxLines: 1, softWrap: false))),
                   ),
                   barGroups: List.generate(chartKeys.length, (i) {
                     final key = chartKeys[i];
@@ -251,7 +276,7 @@ class _PeriodReport extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text('Breakdown', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
+          Text('Breakdown', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 15, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           ...sortedKeys.map((key) {
             final dp = dataPoints[key]!;
@@ -261,18 +286,25 @@ class _PeriodReport extends StatelessWidget {
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.borderColor)),
+              decoration: BoxDecoration(
+                color: theme.cardColor, 
+                borderRadius: BorderRadius.circular(16), 
+                border: null,
+                boxShadow: isDark ? [] : [
+                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
+                ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(key, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
+                  Text(key, style: TextStyle(color: theme.textTheme.titleMedium?.color, fontSize: 14, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   if (showInc && dp['income']! > 0)
-                    _breakdownRow('Income', dp['income']!, AppTheme.primaryColor),
+                    _breakdownRow(context, 'Income', dp['income']!, AppTheme.primaryColor),
                   if (showInc && showExp && dp['income']! > 0 && dp['expense']! > 0)
                     const SizedBox(height: 8),
                   if (showExp && dp['expense']! > 0)
-                    _breakdownRow('Expense', dp['expense']!, AppTheme.errorColor),
+                    _breakdownRow(context, 'Expense', dp['expense']!, AppTheme.errorColor),
                 ],
               ),
             );
@@ -282,17 +314,18 @@ class _PeriodReport extends StatelessWidget {
     );
   }
 
-  Widget _legendItem(String label, Color color) {
+  Widget _legendItem(BuildContext context, String label, Color color) {
     return Row(
       children: [
         Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+        Text(label, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 10)),
       ],
     );
   }
 
-  Widget _breakdownRow(String label, double amount, Color color) {
+  Widget _breakdownRow(BuildContext context, String label, double amount, Color color) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -300,7 +333,7 @@ class _PeriodReport extends StatelessWidget {
           children: [
             Container(width: 4, height: 16, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            Text(label, style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 13)),
           ],
         ),
         Text('Rs ${amount.toStringAsFixed(0)}', style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),

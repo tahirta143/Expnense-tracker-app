@@ -2,10 +2,11 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/expense.dart';
 import '../models/category.dart';
+import '../models/wallet.dart';
 
 class DatabaseHelper {
   static const _databaseName = 'expense_tracker.db';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 4;
 
   // expenses table
   static const table = 'expenses';
@@ -17,6 +18,8 @@ class DatabaseHelper {
   static const columnNotes = 'notes';
   static const columnIcon = 'icon';
   static const columnIsIncome = 'is_income';
+  static const columnWalletId = 'wallet_id';
+  static const columnToWalletId = 'to_wallet_id';
 
   // categories table
   static const catTable = 'categories';
@@ -24,6 +27,14 @@ class DatabaseHelper {
   static const catColumnName = 'name';
   static const catColumnIcon = 'icon';
   static const catColumnColor = 'color';
+
+  // wallets table
+  static const walletTable = 'wallets';
+  static const walletColumnId = 'id';
+  static const walletColumnName = 'name';
+  static const walletColumnBalance = 'balance';
+  static const walletColumnType = 'type';
+  static const walletColumnIcon = 'icon';
 
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
@@ -59,7 +70,9 @@ class DatabaseHelper {
         $columnDate TEXT NOT NULL,
         $columnNotes TEXT,
         $columnIcon TEXT,
-        $columnIsIncome INTEGER DEFAULT 0
+        $columnIsIncome INTEGER DEFAULT 0,
+        $columnWalletId INTEGER,
+        $columnToWalletId INTEGER
       )
     ''');
     await db.execute('''
@@ -70,6 +83,16 @@ class DatabaseHelper {
         $catColumnColor INTEGER NOT NULL
       )
     ''');
+    await db.execute('''
+      CREATE TABLE $walletTable (
+        $walletColumnId INTEGER PRIMARY KEY AUTOINCREMENT,
+        $walletColumnName TEXT NOT NULL,
+        $walletColumnBalance REAL NOT NULL,
+        $walletColumnType TEXT NOT NULL,
+        $walletColumnIcon TEXT NOT NULL
+      )
+    ''');
+    await _insertDefaultWallets(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -90,6 +113,43 @@ class DatabaseHelper {
       if (!hasIncomeColumn) {
         await db.execute('ALTER TABLE $table ADD COLUMN $columnIsIncome INTEGER DEFAULT 0');
       }
+    }
+    if (oldVersion < 4) {
+      // Add wallets table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $walletTable (
+          $walletColumnId INTEGER PRIMARY KEY AUTOINCREMENT,
+          $walletColumnName TEXT NOT NULL,
+          $walletColumnBalance REAL NOT NULL,
+          $walletColumnType TEXT NOT NULL,
+          $walletColumnIcon TEXT NOT NULL
+        )
+      ''');
+      
+      // Add wallet columns to expenses
+      var columns = await db.rawQuery('PRAGMA table_info($table)');
+      if (!columns.any((c) => c['name'] == columnWalletId)) {
+        await db.execute('ALTER TABLE $table ADD COLUMN $columnWalletId INTEGER');
+      }
+      if (!columns.any((c) => c['name'] == columnToWalletId)) {
+        await db.execute('ALTER TABLE $table ADD COLUMN $columnToWalletId INTEGER');
+      }
+
+      await _insertDefaultWallets(db);
+    }
+  }
+
+  Future<void> _insertDefaultWallets(Database db) async {
+    final List<Map<String, dynamic>> defaultWallets = [
+      {'name': 'Cash', 'balance': 0.0, 'type': 'Cash', 'icon': '💵'},
+      {'name': 'Bank Account', 'balance': 0.0, 'type': 'Bank', 'icon': '🏦'},
+      {'name': 'Easypaisa', 'balance': 0.0, 'type': 'Easypaisa', 'icon': '📱'},
+      {'name': 'JazzCash', 'balance': 0.0, 'type': 'JazzCash', 'icon': '📲'},
+      {'name': 'Credit Card', 'balance': 0.0, 'type': 'Credit Card', 'icon': '💳'},
+    ];
+
+    for (var wallet in defaultWallets) {
+      await db.insert(walletTable, wallet);
     }
   }
 
@@ -198,18 +258,22 @@ class DatabaseHelper {
 
   Future<double> getMonthlyTotal() async {
     final expenses = await getMonthlyExpenses();
-    return expenses.where((e) => !e.isIncome).fold<double>(0.0, (sum, e) => sum + e.amount);
+    return expenses
+        .where((e) => !e.isIncome && e.category != 'Transfer')
+        .fold<double>(0.0, (sum, e) => sum + e.amount);
   }
 
   Future<double> getMonthlyIncomeTotal() async {
     final transactions = await getMonthlyExpenses();
-    return transactions.where((e) => e.isIncome).fold<double>(0.0, (sum, e) => sum + e.amount);
+    return transactions
+        .where((e) => e.isIncome && e.category != 'Transfer')
+        .fold<double>(0.0, (sum, e) => sum + e.amount);
   }
 
   Future<Map<String, double>> getTotalByCategory() async {
     final db = await database;
     final result = await db.rawQuery(
-      'SELECT $columnCategory, SUM($columnAmount) as total FROM $table WHERE $columnIsIncome = 0 AND $columnDate >= ? AND $columnDate <= ? GROUP BY $columnCategory',
+      'SELECT $columnCategory, SUM($columnAmount) as total FROM $table WHERE $columnIsIncome = 0 AND $columnCategory != "Transfer" AND $columnDate >= ? AND $columnDate <= ? GROUP BY $columnCategory',
       [
         DateTime(DateTime.now().year, DateTime.now().month, 1).toIso8601String(),
         DateTime(DateTime.now().year, DateTime.now().month + 1, 0).toIso8601String(),
@@ -262,7 +326,46 @@ class DatabaseHelper {
     await db.transaction((txn) async {
       await txn.delete(table);
       await txn.delete(catTable);
+      await txn.delete(walletTable);
     });
+  }
+
+  // ─── Wallet CRUD ──────────────────────────────────────────────────────────
+
+  Future<List<Wallet>> getAllWallets() async {
+    final db = await database;
+    final maps = await db.query(walletTable);
+    return maps.map((m) => Wallet.fromMap(m)).toList();
+  }
+
+  Future<int> insertWallet(Wallet wallet) async {
+    final db = await database;
+    var data = await _filterSchema(walletTable, wallet.toMap());
+    return await db.insert(walletTable, data);
+  }
+
+  Future<int> updateWallet(Wallet wallet) async {
+    final db = await database;
+    var data = await _filterSchema(walletTable, wallet.toMap());
+    return await db.update(
+      walletTable,
+      data,
+      where: '$walletColumnId = ?',
+      whereArgs: [wallet.id],
+    );
+  }
+
+  Future<int> deleteWallet(int id) async {
+    final db = await database;
+    return await db.delete(walletTable, where: '$walletColumnId = ?', whereArgs: [id]);
+  }
+
+  Future<void> updateWalletBalance(int walletId, double amount, {bool isAddition = true}) async {
+    final db = await database;
+    await db.rawUpdate(
+      'UPDATE $walletTable SET $walletColumnBalance = $walletColumnBalance + ? WHERE $walletColumnId = ?',
+      [isAddition ? amount : -amount, walletId],
+    );
   }
 
   Future<Map<String, dynamic>> backupData() async {

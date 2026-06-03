@@ -17,6 +17,8 @@ import '../services/ai_service.dart';
 import 'expense_list_screen.dart';
 import 'reports_screen.dart';
 import 'category_screen.dart';
+import 'wallet_screen.dart';
+import '../providers/wallet_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -85,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAIChatSheet(BuildContext context) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (_) => const _AIChatDialog(),
@@ -112,16 +115,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (_fabX < 0) {
       final size = MediaQuery.of(context).size;
       _fabX = size.width - 72;
       _fabY = size.height - 160;
     }
 
-    final titles = ['Dashboard', 'Transactions', 'Reports', 'Categories'];
+    final titles = ['Dashboard', 'Wallets', 'Transactions', 'Reports', 'Categories'];
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _searchActive
           ? _buildSearchBar()
           : CustomAppBar(
@@ -143,7 +147,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert, color: AppTheme.primaryColor),
-                      color: AppTheme.cardColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       onSelected: (value) async {
                         if (value == 'export') {
@@ -182,7 +185,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           final confirmed = await showDialog<bool>(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              backgroundColor: AppTheme.cardColor,
                               title: const Text('Clear All Data'),
                               content: const Text('Are you sure you want to delete all transactions and categories? This cannot be undone.'),
                               actions: [
@@ -251,6 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: _selectedIndex,
                   children: [
                     _buildDashboard(context, expenseProvider),
+                    const WalletScreen(),
                     const ExpenseListScreen(),
                     const ReportsScreen(),
                     const CategoryScreen(),
@@ -274,6 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               items: const [
                 BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+                BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallets'),
                 BottomNavigationBarItem(icon: Icon(Icons.list_rounded), label: 'Expenses'),
                 BottomNavigationBarItem(icon: Icon(Icons.analytics_rounded), label: 'Reports'),
                 BottomNavigationBarItem(icon: Icon(Icons.category_rounded), label: 'Category'),
@@ -306,18 +310,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   PreferredSizeWidget _buildSearchBar() {
+    final theme = Theme.of(context);
     return PreferredSize(
       preferredSize: const Size.fromHeight(70),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
+          color: theme.appBarTheme.backgroundColor,
           borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(20),
             bottomRight: Radius.circular(20),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.3 : 0.1),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -343,16 +348,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: TextField(
                     controller: _searchController,
                     autofocus: true,
-                    style: const TextStyle(color: AppTheme.textPrimary),
+                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                     decoration: InputDecoration(
                       hintText: 'Search transactions...',
-                      hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                      hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: AppTheme.cardColor,
+                      fillColor: theme.cardColor,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       isDense: true,
                     ),
@@ -363,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (_searchController.text.isNotEmpty)
                   IconButton(
-                    icon: const Icon(Icons.clear, color: AppTheme.textSecondary, size: 20),
+                    icon: Icon(Icons.clear, color: theme.textTheme.bodySmall?.color, size: 20),
                     onPressed: () {
                       _searchController.clear();
                       context.read<ExpenseProvider>().loadMonthlyExpenses();
@@ -379,15 +384,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _confirmDelete(BuildContext ctx, int id) async {
+    final theme = Theme.of(ctx);
     final confirmed = await showDialog<bool>(
       context: ctx,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Transaction', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to delete this transaction?', style: TextStyle(color: AppTheme.textSecondary)),
+        title: Text('Delete Transaction', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete this transaction?', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx, false), child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(dialogCtx, false), child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodySmall?.color))),
           TextButton(onPressed: () => Navigator.pop(dialogCtx, true), child: const Text('Delete', style: TextStyle(color: AppTheme.errorColor))),
         ],
       ),
@@ -399,13 +405,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSearchOverlay() {
+    final theme = Theme.of(context);
     return Consumer<ExpenseProvider>(
       builder: (context, provider, _) {
         if (_searchController.text.isEmpty) return const SizedBox.shrink();
         return Container(
-          color: AppTheme.backgroundColor,
+          color: theme.scaffoldBackgroundColor,
           child: provider.expenses.isEmpty
-              ? Center(child: Text('No results for "${_searchController.text}"', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)))
+              ? Center(child: Text('No results for "${_searchController.text}"', style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 14)))
               : ListView.builder(
                   padding: const EdgeInsets.only(top: 8, bottom: 100),
                   itemCount: provider.expenses.length,
@@ -420,6 +427,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDashboard(BuildContext context, ExpenseProvider provider) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final now = DateTime.now();
     final sw = MediaQuery.of(context).size.width;
     final monthName = DateFormat('MMMM, yyyy').format(now);
@@ -427,13 +436,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final balance = provider.monthlyIncomeTotal - provider.monthlyTotal;
     
     return SingleChildScrollView(
-      padding: EdgeInsets.only(top: sw * 0.03, bottom: 100),
+      padding: EdgeInsets.only(top: sw * 0.03, bottom: 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(monthName, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+            child: Text(
+              monthName, 
+              style: TextStyle(
+                color: theme.textTheme.titleLarge?.color, 
+                fontSize: 13, 
+                fontWeight: FontWeight.w500
+              )
+            ),
           ),
           if (_showAIInsights) ...[
             const SizedBox(height: 12),
@@ -455,10 +471,10 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSpacing: 8,
               childAspectRatio: 2.4,
               children: [
-                _summaryCard(title: 'Total Income', value: 'Rs ${provider.monthlyIncomeTotal.toStringAsFixed(0)}', sub: 'this month', color: AppTheme.primaryColor, icon: Icons.account_balance_wallet_rounded, delay: 0),
-                _summaryCard(title: 'Total Expense', value: 'Rs ${provider.monthlyTotal.toStringAsFixed(0)}', sub: 'this month', color: AppTheme.errorColor, icon: Icons.shopping_cart_checkout_rounded, delay: 100),
-                _summaryCard(title: 'Balance', value: 'Rs ${balance.toStringAsFixed(0)}', sub: 'remaining', color: balance < 0 ? AppTheme.errorColor : AppTheme.primaryColor, icon: Icons.account_balance_rounded, delay: 200),
-                _summaryCard(title: 'Transactions', value: provider.expenses.length.toString(), sub: 'this month', color: AppTheme.textPrimary, icon: Icons.receipt_long_rounded, delay: 300),
+                _summaryCard(context, title: 'Total Income', value: 'Rs ${provider.monthlyIncomeTotal.toStringAsFixed(0)}', sub: 'this month', color: AppTheme.primaryColor, icon: Icons.account_balance_wallet_rounded, delay: 0),
+                _summaryCard(context, title: 'Total Expense', value: 'Rs ${provider.monthlyTotal.toStringAsFixed(0)}', sub: 'this month', color: AppTheme.errorColor, icon: Icons.shopping_cart_checkout_rounded, delay: 100),
+                _summaryCard(context, title: 'Balance', value: 'Rs ${balance.toStringAsFixed(0)}', sub: 'remaining', color: balance < 0 ? AppTheme.errorColor : AppTheme.primaryColor, icon: Icons.account_balance_rounded, delay: 200),
+                _summaryCard(context, title: 'Transactions', value: provider.expenses.length.toString(), sub: 'this month', color: theme.textTheme.titleLarge?.color ?? AppTheme.textPrimary, icon: Icons.receipt_long_rounded, delay: 300),
               ],
             ),
           ),
@@ -471,7 +487,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Weekly Overview', style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Weekly Overview', 
+                      style: TextStyle(
+                        color: theme.textTheme.titleLarge?.color, 
+                        fontSize: 15, 
+                        fontWeight: FontWeight.bold
+                      )
+                    ),
                     Row(
                       children: [
                         _legendItem('Income', AppTheme.primaryColor),
@@ -484,10 +507,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.fromLTRB(10, 20, 20, 10),
-                  decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.borderColor)),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor, 
+                    borderRadius: BorderRadius.circular(16), 
+                    border: null,
+                    boxShadow: isDark ? [] : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
                   child: SizedBox(
                     height: 200,
-                    child: BarChart(_getWeeklyBarChartData(provider, now)),
+                    child: BarChart(_getWeeklyBarChartData(provider, now, isDark)),
                   ),
                 ),
               ],
@@ -499,8 +533,25 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Recent Transactions', style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
-                GestureDetector(onTap: () => setState(() => _selectedIndex = 1), child: const Text('View All', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w600))),
+                Text(
+                  'Recent Transactions', 
+                  style: TextStyle(
+                    color: theme.textTheme.titleLarge?.color, 
+                    fontSize: 15, 
+                    fontWeight: FontWeight.bold
+                  )
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _selectedIndex = 2), 
+                  child: Text(
+                    'View All', 
+                    style: TextStyle(
+                      color: theme.textTheme.bodyMedium?.color, 
+                      fontSize: 12, 
+                      fontWeight: FontWeight.w600
+                    )
+                  )
+                ),
               ],
             ),
           ),
@@ -509,10 +560,34 @@ class _HomeScreenState extends State<HomeScreen> {
               ? Container(
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.borderColor)),
-                  child: const Center(child: Column(children: [Text('📭', style: TextStyle(fontSize: 40)), SizedBox(height: 10), Text('No transactions yet', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13))])),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor, 
+                    borderRadius: BorderRadius.circular(16), 
+                    border: null
+                  ),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        const Text('📭', style: TextStyle(fontSize: 40)), 
+                        const SizedBox(height: 10), 
+                        Text(
+                          'No transactions yet', 
+                          style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 13)
+                        )
+                      ]
+                    )
+                  ),
                 )
-              : ListView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: recentExpenses.length, itemBuilder: (context, index) => ExpenseCard(expense: recentExpenses[index], index: index, onDelete: () => _confirmDelete(context, recentExpenses[index].id!))),
+              : ListView.builder(
+                  shrinkWrap: true, 
+                  physics: const NeverScrollableScrollPhysics(), 
+                  itemCount: recentExpenses.length, 
+                  itemBuilder: (context, index) => ExpenseCard(
+                    expense: recentExpenses[index], 
+                    index: index, 
+                    onDelete: () => _confirmDelete(context, recentExpenses[index].id!)
+                  )
+                ),
         ],
       ),
     );
@@ -528,7 +603,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _summaryCard({required String title, required String value, required String sub, required Color color, required IconData icon, int delay = 0}) {
+  Widget _summaryCard(BuildContext context, {required String title, required String value, required String sub, required Color color, required IconData icon, int delay = 0}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 400 + delay),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -536,7 +614,18 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, anim, child) => Transform.scale(scale: anim, child: Opacity(opacity: anim.clamp(0.0, 1.0), child: child)),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.borderColor)),
+        decoration: BoxDecoration(
+          color: theme.cardColor, 
+          borderRadius: BorderRadius.circular(14), 
+          border: null,
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
         child: Row(
           children: [
             Icon(icon, color: color, size: 22),
@@ -547,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(title, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(title, style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
@@ -557,7 +646,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  BarChartData _getWeeklyBarChartData(ExpenseProvider provider, DateTime now) {
+  BarChartData _getWeeklyBarChartData(ExpenseProvider provider, DateTime now, bool isDark) {
     final startOfWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
     final List<BarChartGroupData> barGroups = [];
 
@@ -598,7 +687,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return BarChartData(
-      gridData: const FlGridData(show: true, drawVerticalLine: false),
+      gridData: FlGridData(
+        show: true, 
+        drawVerticalLine: false,
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+          strokeWidth: 1,
+        ),
+      ),
       titlesData: FlTitlesData(
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -608,7 +704,13 @@ class _HomeScreenState extends State<HomeScreen> {
             getTitlesWidget: (value, meta) {
               const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
               if (value >= 0 && value < 7) {
-                return Text(days[value.toInt()], style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10));
+                return Text(
+                  days[value.toInt()], 
+                  style: TextStyle(
+                    color: isDark ? AppTheme.textSecondary : Colors.grey, 
+                    fontSize: 10
+                  )
+                );
               }
               return const SizedBox.shrink();
             },
@@ -619,7 +721,13 @@ class _HomeScreenState extends State<HomeScreen> {
             showTitles: true,
             reservedSize: 40,
             getTitlesWidget: (value, meta) {
-              return Text('Rs ${value.toInt()}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 8));
+              return Text(
+                'Rs ${value.toInt()}', 
+                style: TextStyle(
+                  color: isDark ? AppTheme.textSecondary : Colors.grey, 
+                  fontSize: 8
+                )
+              );
             },
           ),
         ),
@@ -667,7 +775,6 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
-      builder: (context, child) => Theme(data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: AppTheme.primaryColor, surface: AppTheme.cardColor)), child: child!),
     );
     if (picked != null) setState(() => _selectedDate = picked);
   }
@@ -675,6 +782,12 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
   void _submit() {
     if (_titleController.text.isEmpty || _amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields'), backgroundColor: AppTheme.errorColor));
+      return;
+    }
+
+    final wallets = context.read<WalletProvider>().wallets;
+    if (wallets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please create a wallet first'), backgroundColor: AppTheme.errorColor));
       return;
     }
     
@@ -701,6 +814,7 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
       notes: _notesController.text.isEmpty ? null : _notesController.text,
       icon: icon,
       isIncome: _isIncome,
+      walletId: wallets.first.id, // Default to first wallet for quick add
     );
     widget.onSave(expense);
     Navigator.pop(context);
@@ -708,26 +822,27 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return DraggableScrollableSheet(
       initialChildSize: 0.88,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (_, scrollController) => Container(
-        decoration: const BoxDecoration(color: AppTheme.backgroundColor, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        decoration: BoxDecoration(color: theme.scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
         child: Column(
           children: [
-            Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: AppTheme.borderColor, borderRadius: BorderRadius.circular(2))),
+            Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: theme.dividerColor, borderRadius: BorderRadius.circular(2))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_isIncome ? 'Add Income' : 'Add Expense', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-                  GestureDetector(onTap: () => Navigator.pop(context), child: const Icon(Icons.close, color: AppTheme.textSecondary)),
+                  Text(_isIncome ? 'Add Income' : 'Add Expense', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 18, fontWeight: FontWeight.bold)),
+                  GestureDetector(onTap: () => Navigator.pop(context), child: Icon(Icons.close, color: theme.textTheme.bodySmall?.color)),
                 ],
               ),
             ),
-            const Divider(color: AppTheme.borderColor, height: 1),
+            Divider(color: theme.dividerColor, height: 1),
             Expanded(
               child: SingleChildScrollView(
                 controller: scrollController,
@@ -742,8 +857,12 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
                             onTap: () => setState(() => _isIncome = false),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(color: !_isIncome ? Colors.red.withValues(alpha: 0.2) : AppTheme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: !_isIncome ? Colors.red : AppTheme.borderColor)),
-                              child: Center(child: Text('Expense', style: TextStyle(color: !_isIncome ? Colors.red : AppTheme.textSecondary, fontWeight: FontWeight.bold))),
+                              decoration: BoxDecoration(
+                                color: !_isIncome ? Colors.red.withOpacity(0.2) : theme.cardColor, 
+                                borderRadius: BorderRadius.circular(12), 
+                                border: Border.all(color: !_isIncome ? Colors.red : theme.dividerColor)
+                              ),
+                              child: Center(child: Text('Expense', style: TextStyle(color: !_isIncome ? Colors.red : theme.textTheme.bodySmall?.color, fontWeight: FontWeight.bold))),
                             ),
                           ),
                         ),
@@ -758,40 +877,44 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
                             }),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(color: _isIncome ? AppTheme.primaryColor.withValues(alpha: 0.2) : AppTheme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: _isIncome ? AppTheme.primaryColor : AppTheme.borderColor)),
-                              child: Center(child: Text('Income', style: TextStyle(color: _isIncome ? AppTheme.primaryColor : AppTheme.textSecondary, fontWeight: FontWeight.bold))),
+                              decoration: BoxDecoration(
+                                color: _isIncome ? AppTheme.primaryColor.withOpacity(0.2) : theme.cardColor, 
+                                borderRadius: BorderRadius.circular(12), 
+                                border: Border.all(color: _isIncome ? AppTheme.primaryColor : theme.dividerColor)
+                              ),
+                              child: Center(child: Text('Income', style: TextStyle(color: _isIncome ? AppTheme.primaryColor : theme.textTheme.bodySmall?.color, fontWeight: FontWeight.bold))),
                             ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    _label('Title *'),
+                    _label(context, 'Title *'),
                     const SizedBox(height: 8),
-                    _field(controller: _titleController, hint: 'e.g., Salary, Rent, Grocery', icon: Icons.label_outline),
+                    _field(context, controller: _titleController, hint: 'e.g., Salary, Rent, Grocery', icon: Icons.label_outline),
                     const SizedBox(height: 16),
-                    _label('Amount *'),
+                    _label(context, 'Amount *'),
                     const SizedBox(height: 8),
-                    _field(controller: _amountController, hint: '0.00', icon: Icons.attach_money, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                    _field(context, controller: _amountController, hint: '0.00', icon: Icons.attach_money, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
                     const SizedBox(height: 16),
-                    _label('Category'),
+                    _label(context, 'Category'),
                     const SizedBox(height: 10),
-                    _isIncome ? _buildIncomeCategoryDropdown() : _buildExpenseCategoryDropdown(),
+                    _isIncome ? _buildIncomeCategoryDropdown(context) : _buildExpenseCategoryDropdown(context),
                     const SizedBox(height: 16),
-                    _label('Date'),
+                    _label(context, 'Date'),
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: _pickDate,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(color: AppTheme.cardColor, border: Border.all(color: AppTheme.borderColor), borderRadius: BorderRadius.circular(12)),
-                        child: Row(children: [const Icon(Icons.calendar_today, color: AppTheme.primaryColor, size: 18), const SizedBox(width: 10), Text(DateFormat('MMM d, yyyy').format(_selectedDate), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)), const Spacer(), const Icon(Icons.arrow_drop_down, color: AppTheme.textSecondary)]),
+                        decoration: BoxDecoration(color: theme.cardColor, border: Border.all(color: theme.dividerColor), borderRadius: BorderRadius.circular(12)),
+                        child: Row(children: [const Icon(Icons.calendar_today, color: AppTheme.primaryColor, size: 18), const SizedBox(width: 10), Text(DateFormat('MMM d, yyyy').format(_selectedDate), style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 14)), const Spacer(), Icon(Icons.arrow_drop_down, color: theme.textTheme.bodySmall?.color)]),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _label('Notes (Optional)'),
+                    _label(context, 'Notes (Optional)'),
                     const SizedBox(height: 8),
-                    _field(controller: _notesController, hint: 'Add notes...', icon: Icons.notes, maxLines: 3),
+                    _field(context, controller: _notesController, hint: 'Add notes...', icon: Icons.notes, maxLines: 3),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -819,38 +942,40 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
     );
   }
 
-  Widget _buildIncomeCategoryDropdown() {
+  Widget _buildIncomeCategoryDropdown(BuildContext context) {
+    final theme = Theme.of(context);
     final incomeCats = ['Salary', 'Business', 'Investment', 'Other'];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.borderColor)),
+      decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: theme.dividerColor)),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedCategory,
           isExpanded: true,
-          dropdownColor: AppTheme.cardColor,
-          items: incomeCats.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(color: AppTheme.textPrimary)))).toList(),
+          dropdownColor: theme.cardColor,
+          items: incomeCats.map((c) => DropdownMenuItem(value: c, child: Text(c, style: TextStyle(color: theme.textTheme.bodyMedium?.color)))).toList(),
           onChanged: (v) => setState(() => _selectedCategory = v!),
         ),
       ),
     );
   }
 
-  Widget _buildExpenseCategoryDropdown() {
+  Widget _buildExpenseCategoryDropdown(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer<CategoryProvider>(
       builder: (context, catProvider, _) {
         final cats = catProvider.categories;
-        if (cats.isEmpty) return const Text('No categories', style: TextStyle(color: AppTheme.textSecondary));
+        if (cats.isEmpty) return Text('No categories', style: TextStyle(color: theme.textTheme.bodySmall?.color));
         if (!cats.any((c) => c.name == _selectedCategory)) _selectedCategory = cats.first.name;
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.borderColor)),
+          decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: theme.dividerColor)),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedCategory,
               isExpanded: true,
-              dropdownColor: AppTheme.cardColor,
-              items: cats.map((c) => DropdownMenuItem(value: c.name, child: Row(children: [Text(c.icon), const SizedBox(width: 10), Text(c.name, style: const TextStyle(color: AppTheme.textPrimary))]))).toList(),
+              dropdownColor: theme.cardColor,
+              items: cats.map((c) => DropdownMenuItem(value: c.name, child: Row(children: [Text(c.icon), const SizedBox(width: 10), Text(c.name, style: TextStyle(color: theme.textTheme.bodyMedium?.color))]))).toList(),
               onChanged: (v) => setState(() => _selectedCategory = v!),
             ),
           ),
@@ -859,9 +984,10 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
     );
   }
 
-  Widget _label(String text) => Text(text, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600));
-  Widget _field({required TextEditingController controller, required String hint, required IconData icon, TextInputType? keyboardType, int maxLines = 1}) {
-    return TextField(controller: controller, style: const TextStyle(color: AppTheme.textPrimary), keyboardType: keyboardType, maxLines: maxLines, decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: AppTheme.textSecondary), prefixIcon: Icon(icon, color: AppTheme.primaryColor)));
+  Widget _label(BuildContext context, String text) => Text(text, style: TextStyle(color: Theme.of(context).textTheme.titleSmall?.color, fontSize: 13, fontWeight: FontWeight.w600));
+  Widget _field(BuildContext context, {required TextEditingController controller, required String hint, required IconData icon, TextInputType? keyboardType, int maxLines = 1}) {
+    final theme = Theme.of(context);
+    return TextField(controller: controller, style: TextStyle(color: theme.textTheme.bodyMedium?.color), keyboardType: keyboardType, maxLines: maxLines, decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color), prefixIcon: Icon(icon, color: AppTheme.primaryColor)));
   }
 }
 
@@ -918,6 +1044,7 @@ class _AIChatDialogState extends State<_AIChatDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final sh = MediaQuery.of(context).size.height;
 
     return Dialog(
@@ -927,7 +1054,7 @@ class _AIChatDialogState extends State<_AIChatDialog> {
         borderRadius: BorderRadius.circular(24),
         child: Container(
           height: sh * 0.75, // Puts a limit on the dialog height
-          color: AppTheme.backgroundColor,
+          color: theme.scaffoldBackgroundColor,
           child: Scaffold(
             backgroundColor: Colors.transparent,
             resizeToAvoidBottomInset: true, // Automatically handles keyboard
@@ -939,13 +1066,13 @@ class _AIChatDialogState extends State<_AIChatDialog> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryColor, size: 20),
-                          SizedBox(width: 10),
+                          const Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryColor, size: 20),
+                          const SizedBox(width: 10),
                           Text(
                             'AI Assistant',
-                            style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -956,19 +1083,19 @@ class _AIChatDialogState extends State<_AIChatDialog> {
                               AIService().clearHistory();
                               setState(() => _messages.clear());
                             },
-                            icon: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary, size: 20),
+                            icon: Icon(Icons.refresh_rounded, color: theme.textTheme.bodySmall?.color, size: 20),
                             tooltip: 'Clear Chat',
                           ),
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close_rounded, color: AppTheme.textSecondary, size: 20),
+                            icon: Icon(Icons.close_rounded, color: theme.textTheme.bodySmall?.color, size: 20),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                const Divider(color: AppTheme.borderColor, height: 1),
+                Divider(color: theme.dividerColor, height: 1),
                 
                 // Chat Messages
                 Expanded(
@@ -978,9 +1105,9 @@ class _AIChatDialogState extends State<_AIChatDialog> {
                     itemCount: _messages.isEmpty ? 1 : _messages.length,
                     itemBuilder: (context, index) {
                       if (_messages.isEmpty) {
-                        return const Text(
+                        return Text(
                           'Ask me about your financial health, monthly summaries, or specific spending habits.\n\nExample:\n• Summarize my transactions for this month.\n• How is my daily spending trend?\n• Can I afford a Rs 10,000 expense next month?',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontStyle: FontStyle.italic),
+                          style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 13, fontStyle: FontStyle.italic),
                         );
                       }
                       
@@ -994,16 +1121,16 @@ class _AIChatDialogState extends State<_AIChatDialog> {
                           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: isUser ? AppTheme.primaryColor.withValues(alpha: 0.2) : AppTheme.cardColor,
+                            color: isUser ? AppTheme.primaryColor.withOpacity(0.2) : theme.cardColor,
                             borderRadius: BorderRadius.circular(12).copyWith(
                               bottomRight: isUser ? Radius.zero : null,
                               bottomLeft: isUser ? null : Radius.zero,
                             ),
-                            border: Border.all(color: isUser ? AppTheme.primaryColor.withValues(alpha: 0.3) : AppTheme.borderColor),
+                            border: Border.all(color: isUser ? AppTheme.primaryColor.withOpacity(0.3) : theme.dividerColor),
                           ),
                           child: Text(
                             msg['content']!,
-                            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, height: 1.4),
+                            style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 13, height: 1.4),
                           ),
                         ),
                       );
@@ -1020,21 +1147,21 @@ class _AIChatDialogState extends State<_AIChatDialog> {
                 // Input Area
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.surfaceColor,
-                    border: Border(top: BorderSide(color: AppTheme.borderColor)),
+                  decoration: BoxDecoration(
+                    color: theme.appBarTheme.backgroundColor,
+                    border: Border(top: BorderSide(color: theme.dividerColor)),
                   ),
                   child: Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _queryController,
-                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                          style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 14),
                           decoration: InputDecoration(
                             hintText: 'Ask me anything...',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                             filled: true,
-                            fillColor: AppTheme.cardColor,
+                            fillColor: theme.cardColor,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           ),
                           onSubmitted: (_) => _askAI(),
@@ -1043,7 +1170,7 @@ class _AIChatDialogState extends State<_AIChatDialog> {
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: _isTyping ? null : _askAI,
-                        icon: Icon(Icons.send_rounded, color: _isTyping ? AppTheme.textSecondary : AppTheme.primaryColor),
+                        icon: Icon(Icons.send_rounded, color: _isTyping ? theme.textTheme.bodySmall?.color : AppTheme.primaryColor),
                       ),
                     ],
                   ),

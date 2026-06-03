@@ -22,21 +22,22 @@ class CategoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final sw = MediaQuery.of(context).size.width;
+
     return Consumer<CategoryProvider>(
       builder: (context, provider, _) {
         final categories = provider.categories;
         return TweenAnimationBuilder<double>(
           duration: const Duration(milliseconds: 500),
           tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) =>
-              Opacity(opacity: value, child: child!),
+          builder: (context, value, child) => Opacity(opacity: value, child: child!),
           child: Column(
             children: [
             // Add button row
             Padding(
-              padding: EdgeInsets.fromLTRB(
-                  sw * 0.04, sw * 0.03, sw * 0.04, sw * 0.02),
+              padding: EdgeInsets.fromLTRB(sw * 0.04, sw * 0.03, sw * 0.04, sw * 0.02),
               child: SizedBox(
                 width: double.infinity,
                 height: sw * 0.12,
@@ -45,27 +46,21 @@ class CategoryScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.add),
-                  label: const Text(
-                    'Add Category',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  label: const Text('Add Category', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
             // Category list
             Expanded(
               child: categories.isEmpty
-                  ? const Center(
-                      child: Text('No categories yet',
-                          style: TextStyle(color: AppTheme.textPrimary)),
+                  ? Center(
+                      child: Text('No categories yet', style: TextStyle(color: theme.textTheme.titleLarge?.color)),
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.fromLTRB(
-                          sw * 0.04, 0, sw * 0.04, 110),
+                      padding: EdgeInsets.fromLTRB(sw * 0.04, 0, sw * 0.04, 110),
                       itemCount: categories.length,
                       itemBuilder: (context, index) {
                         final cat = categories[index];
@@ -84,14 +79,14 @@ class CategoryScreen extends StatelessWidget {
                           },
                           child: Container(
                             margin: EdgeInsets.only(bottom: sw * 0.025),
-                            padding: EdgeInsets.symmetric(
-                                horizontal: sw * 0.035,
-                                vertical: sw * 0.03),
+                            padding: EdgeInsets.symmetric(horizontal: sw * 0.035, vertical: sw * 0.03),
                             decoration: BoxDecoration(
-                              color: AppTheme.cardColor,
+                              color: theme.cardColor,
                               borderRadius: BorderRadius.circular(14),
-                              border:
-                                  Border.all(color: AppTheme.borderColor),
+                              border: null,
+                              boxShadow: isDark ? [] : [
+                                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
+                              ],
                             ),
                             child: Row(
                               children: [
@@ -99,15 +94,11 @@ class CategoryScreen extends StatelessWidget {
                                   width: sw * 0.11,
                                   height: sw * 0.11,
                                   decoration: BoxDecoration(
-                                    color: Color(cat.color)
-                                        .withValues(alpha: 0.2),
-                                    borderRadius:
-                                        BorderRadius.circular(10),
+                                    color: Color(cat.color).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Center(
-                                    child: Text(cat.icon,
-                                        style: TextStyle(
-                                            fontSize: sw * 0.05)),
+                                    child: Text(cat.icon, style: TextStyle(fontSize: sw * 0.05)),
                                   ),
                                 ),
                                 SizedBox(width: sw * 0.035),
@@ -115,18 +106,15 @@ class CategoryScreen extends StatelessWidget {
                                   child: Text(
                                     cat.name,
                                     style: TextStyle(
-                                      color: AppTheme.textPrimary,
+                                      color: theme.textTheme.titleLarge?.color,
                                       fontSize: sw * 0.038,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
                                 GestureDetector(
-                                  onTap: () => _confirmDelete(
-                                      context, provider, cat.name),
-                                  child: Icon(Icons.delete_outline,
-                                      color: AppTheme.errorColor,
-                                      size: sw * 0.05),
+                                  onTap: () => _confirmDelete(context, provider, cat.name),
+                                  child: Icon(Icons.delete_outline, color: AppTheme.errorColor, size: sw * 0.05),
                                 ),
                               ],
                             ),
@@ -142,32 +130,26 @@ class CategoryScreen extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(
-      BuildContext context, CategoryProvider provider, String name) {
+  void _confirmDelete(BuildContext context, CategoryProvider provider, String name) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Category',
-            style: TextStyle(
-                color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-        content: Text('Delete "$name"?',
-            style: const TextStyle(color: AppTheme.textSecondary)),
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Delete Category', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontWeight: FontWeight.bold)),
+        content: Text('Delete "$name"?', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
           ),
           TextButton(
             onPressed: () {
               provider.deleteCategory(name);
               Navigator.pop(ctx);
             },
-            child: const Text('Delete',
-                style: TextStyle(color: AppTheme.errorColor)),
+            child: const Text('Delete', style: TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),
@@ -235,13 +217,13 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.backgroundColor,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.max,
@@ -252,26 +234,20 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.borderColor,
+                color: theme.dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             // Header
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Add Category',
-                      style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
+                  Text('Add Category', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 18, fontWeight: FontWeight.bold)),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close,
-                        color: AppTheme.textSecondary),
+                    child: Icon(Icons.close, color: theme.textTheme.bodySmall?.color),
                   ),
                 ],
               ),
@@ -284,31 +260,21 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Name field
-                    const Text('Category Name *',
-                        style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
+                    Text('Category Name *', style: TextStyle(color: theme.textTheme.titleSmall?.color, fontSize: 13, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _nameController,
-                      style: const TextStyle(color: AppTheme.textPrimary),
+                      style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                       decoration: InputDecoration(
                         hintText: 'e.g., Gym, Rent',
-                        hintStyle:
-                            const TextStyle(color: AppTheme.textSecondary),
-                        prefixIcon: const Icon(Icons.label_outline,
-                            color: AppTheme.primaryColor),
+                        hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
+                        prefixIcon: const Icon(Icons.label_outline, color: AppTheme.primaryColor),
                       ),
                     ),
                     const SizedBox(height: 16),
 
                     // Emoji picker
-                    const Text('Icon',
-                        style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
+                    Text('Icon', style: TextStyle(color: theme.textTheme.titleSmall?.color, fontSize: 13, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -323,29 +289,20 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                             decoration: BoxDecoration(
                               color: selected
                                   ? AppTheme.primaryColor.withValues(alpha: 0.2)
-                                  : AppTheme.cardColor,
+                                  : theme.cardColor,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: selected
-                                    ? AppTheme.primaryColor
-                                    : AppTheme.borderColor,
+                                color: selected ? AppTheme.primaryColor : theme.dividerColor,
                               ),
                             ),
-                            child: Center(
-                                child: Text(emoji,
-                                    style: const TextStyle(fontSize: 18))),
+                            child: Center(child: Text(emoji, style: const TextStyle(fontSize: 18))),
                           ),
                         );
                       }).toList(),
                     ),
                     const SizedBox(height: 16),
-
                     // Color picker
-                    const Text('Color',
-                        style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
+                    Text('Color', style: TextStyle(color: theme.textTheme.titleSmall?.color, fontSize: 13, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,

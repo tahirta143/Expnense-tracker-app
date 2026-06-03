@@ -9,6 +9,8 @@ class Expense {
   final String? notes;
   final String? icon;
   final bool isIncome;
+  final int? walletId;
+  final int? toWalletId;
 
   Expense({
     this.id,
@@ -19,7 +21,11 @@ class Expense {
     this.notes,
     this.icon,
     this.isIncome = false,
+    this.walletId,
+    this.toWalletId,
   });
+
+  bool get isTransfer => toWalletId != null;
 
   // Convert Expense to JSON for database storage
   Map<String, dynamic> toMap() {
@@ -32,6 +38,8 @@ class Expense {
       'notes': notes,
       'icon': icon ?? getCategoryIcon(category),
       'is_income': isIncome ? 1 : 0,
+      'wallet_id': walletId,
+      'to_wallet_id': toWalletId,
     };
   }
 
@@ -46,6 +54,8 @@ class Expense {
       notes: map['notes'] as String?,
       icon: map['icon'] as String?,
       isIncome: (map['is_income'] as int?) == 1,
+      walletId: map['wallet_id'] as int?,
+      toWalletId: map['to_wallet_id'] as int?,
     );
   }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../themes/app_theme.dart';
+import '../providers/theme_provider.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -17,16 +19,21 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: theme.appBarTheme.backgroundColor,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: themeProvider.isDarkMode 
+                ? Colors.black.withOpacity(0.3) 
+                : Colors.grey.withOpacity(0.15),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -44,7 +51,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.cardColor,
+                      color: theme.cardColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -55,16 +62,21 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 )
               else
-                const SizedBox(width: 40),
+                IconButton(
+                  onPressed: () => themeProvider.toggleTheme(),
+                  icon: Icon(
+                    themeProvider.isDarkMode 
+                        ? Icons.dark_mode_rounded 
+                        : Icons.light_mode_rounded,
+                    color: AppTheme.primaryColor,
+                  ),
+                  tooltip: 'Toggle Theme',
+                ),
               Expanded(
                 child: Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: theme.appBarTheme.titleTextStyle,
                 ),
               ),
               Row(

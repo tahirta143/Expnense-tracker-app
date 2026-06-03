@@ -18,6 +18,8 @@ class ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final sw = MediaQuery.of(context).size.width;
     final iconSize = sw * 0.13;
     final titleFontSize = sw * 0.038;
@@ -46,9 +48,16 @@ class ExpenseCard extends StatelessWidget {
           margin: EdgeInsets.symmetric(horizontal: sw * 0.04, vertical: sw * 0.018),
           padding: EdgeInsets.all(sw * 0.035),
           decoration: BoxDecoration(
-            color: AppTheme.cardColor,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.borderColor, width: 1),
+            border: null,
+            boxShadow: isDark ? [] : [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -75,7 +84,7 @@ class ExpenseCard extends StatelessWidget {
                     Text(
                       expense.title,
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: theme.textTheme.titleLarge?.color,
                         fontSize: titleFontSize,
                         fontWeight: FontWeight.w600,
                       ),
@@ -107,7 +116,7 @@ class ExpenseCard extends StatelessWidget {
                         SizedBox(width: sw * 0.02),
                         Text(
                           expense.formattedDate,
-                          style: TextStyle(color: AppTheme.textPrimary, fontSize: subFontSize),
+                          style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: subFontSize),
                         ),
                       ],
                     ),
@@ -135,7 +144,7 @@ class ExpenseCard extends StatelessWidget {
                         onTap: onDelete,
                         child: Icon(
                           Icons.close,
-                          color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
                           size: sw * 0.045,
                         ),
                       ),
