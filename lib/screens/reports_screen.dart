@@ -3,9 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/expense_provider.dart';
+import '../providers/category_provider.dart';
 import '../themes/app_theme.dart';
+import '../models/expense.dart';
 
 enum _ReportMode { daily, monthly, yearly }
+enum _ViewType { timeline, categories }
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -17,110 +20,221 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   _ReportMode _mode = _ReportMode.daily;
   String _typeFilter = 'All'; // 'All', 'Expense', 'Income'
+  _ViewType _viewType = _ViewType.timeline;
+  String _categoryFilter = 'All';
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Consumer<ExpenseProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<ExpenseProvider, CategoryProvider>(
+      builder: (context, provider, categoryProvider, _) {
+        final categories = ['All', ...categoryProvider.categories.map((c) => c.name)];
+        
         return TweenAnimationBuilder<double>(
           duration: const Duration(milliseconds: 500),
           tween: Tween(begin: 0.0, end: 1.0),
           builder: (context, value, child) => Opacity(opacity: value, child: child!),
           child: Column(
             children: [
-              // ── Type Filter (All, Expense, Income) ──
+              // ── View Type Toggle (Timeline vs Categories) ──
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Row(
-                  children: ['All', 'Expense', 'Income'].map((type) {
-                    final selected = _typeFilter == type;
-                    Color activeColor = AppTheme.primaryColor;
-                    if (type == 'Expense') activeColor = AppTheme.errorColor;
-                    if (type == 'Income') activeColor = AppTheme.primaryColor;
+                  children: [
+                    Expanded(
+                      child: _toggleButton(
+                        label: 'Timeline', 
+                        isSelected: _viewType == _ViewType.timeline,
+                        onTap: () => setState(() => _viewType = _ViewType.timeline),
+                        icon: Icons.show_chart_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _toggleButton(
+                        label: 'Categories', 
+                        isSelected: _viewType == _ViewType.categories,
+                        onTap: () => setState(() => _viewType = _ViewType.categories),
+                        icon: Icons.pie_chart_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _typeFilter = type),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: selected ? activeColor : theme.cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: selected ? activeColor : theme.dividerColor),
-                            boxShadow: !selected && !isDark ? [
-                              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
-                            ] : [],
-                          ),
-                          child: Text(
-                            type,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: selected ? Colors.black : theme.textTheme.titleMedium?.color,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              // ── Period Filter (Daily, Monthly, Yearly) ──
+              // ── Filters Row (Type & Category) ──
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
-                  children: _ReportMode.values.map((mode) {
-                    final labels = {
-                      _ReportMode.daily: 'Daily',
-                      _ReportMode.monthly: 'Monthly',
-                      _ReportMode.yearly: 'Yearly',
-                    };
-                    final selected = _mode == mode;
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _mode = mode),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: selected ? AppTheme.primaryColor : theme.cardColor,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: selected ? AppTheme.primaryColor : theme.dividerColor),
-                            boxShadow: !selected && !isDark ? [
-                              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
-                            ] : [],
-                          ),
-                          child: Text(
-                            labels[mode]!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: selected ? Colors.black : theme.textTheme.titleSmall?.color,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
+                  children: [
+                    // Type Filter Dropdown
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: !isDark ? [
+                            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                          ] : [],
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _typeFilter,
+                            isExpanded: true,
+                            dropdownColor: theme.cardColor,
+                            items: ['All', 'Expense', 'Income'].map((type) {
+                              return DropdownMenuItem(
+                                value: type,
+                                child: Text(
+                                  type,
+                                  style: TextStyle(
+                                    color: theme.textTheme.titleMedium?.color,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setState(() => _typeFilter = val!),
                           ),
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    const SizedBox(width: 12),
+                    // Category Filter Dropdown
+                    Expanded(
+                      flex: 3,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: !isDark ? [
+                            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                          ] : [],
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _categoryFilter,
+                            isExpanded: true,
+                            dropdownColor: theme.cardColor,
+                            items: categories.map((cat) {
+                              return DropdownMenuItem(
+                                value: cat,
+                                child: Text(
+                                  cat,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: theme.textTheme.titleMedium?.color,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setState(() => _categoryFilter = val!),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              
+              // ── Period Filter (Daily, Monthly, Yearly) ──
+              if (_viewType == _ViewType.timeline)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: _ReportMode.values.map((mode) {
+                      final labels = {
+                        _ReportMode.daily: 'Daily',
+                        _ReportMode.monthly: 'Monthly',
+                        _ReportMode.yearly: 'Yearly',
+                      };
+                      final selected = _mode == mode;
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _mode = mode),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: selected ? AppTheme.primaryColor : theme.cardColor,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: !selected && !isDark ? [
+                                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                              ] : [],
+                            ),
+                            child: Text(
+                              labels[mode]!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: selected ? Colors.black : theme.textTheme.titleSmall?.color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               const SizedBox(height: 4),
               // ── Report content ──
               Expanded(
-                child: _PeriodReport(provider: provider, mode: _mode, typeFilter: _typeFilter),
+                child: _viewType == _ViewType.timeline
+                    ? _PeriodReport(
+                        provider: provider, 
+                        mode: _mode, 
+                        typeFilter: _typeFilter,
+                        categoryFilter: _categoryFilter,
+                      )
+                    : _CategoryReport(
+                        provider: provider, 
+                        typeFilter: _typeFilter,
+                        categoryFilter: _categoryFilter,
+                      ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _toggleButton({required String label, required bool isSelected, required VoidCallback onTap, required IconData icon}) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryColor : theme.cardColor,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: isSelected ? Colors.black : AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.black : theme.textTheme.titleMedium?.color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -129,8 +243,14 @@ class _PeriodReport extends StatelessWidget {
   final ExpenseProvider provider;
   final _ReportMode mode;
   final String typeFilter;
+  final String categoryFilter;
 
-  const _PeriodReport({required this.provider, required this.mode, required this.typeFilter});
+  const _PeriodReport({
+    required this.provider, 
+    required this.mode, 
+    required this.typeFilter,
+    required this.categoryFilter,
+  });
 
   String _keyFor(DateTime date) {
     switch (mode) {
@@ -146,10 +266,23 @@ class _PeriodReport extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final transactions = provider.expenses;
+    var transactions = provider.expenses;
+
+    // Apply Filters
+    if (typeFilter == 'Expense') {
+      transactions = transactions.where((e) => !e.isIncome).toList();
+    } else if (typeFilter == 'Income') {
+      transactions = transactions.where((e) => e.isIncome).toList();
+    }
+
+    if (categoryFilter != 'All') {
+      transactions = transactions.where((e) => e.category == categoryFilter).toList();
+    }
+
     final Map<String, Map<String, double>> dataPoints = {}; // key -> {income: val, expense: val}
 
     for (final t in transactions) {
+      if (t.category == 'Transfer' && categoryFilter != 'Transfer') continue;
       final key = _keyFor(t.date);
       dataPoints.putIfAbsent(key, () => {'income': 0, 'expense': 0});
       if (t.isIncome) {
@@ -181,23 +314,11 @@ class _PeriodReport extends StatelessWidget {
         } catch (_) { return 0; }
       });
 
-    if (sortedKeys.isEmpty) return const Center(child: Text('No data found', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)));
+    if (sortedKeys.isEmpty) return Center(child: Text('No data found', style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 14)));
 
     final chartCount = mode == _ReportMode.daily ? 7 : mode == _ReportMode.monthly ? 6 : sortedKeys.length;
     final chartSlice = sortedKeys.length > chartCount ? sortedKeys.sublist(0, chartCount) : sortedKeys;
     final chartKeys = chartSlice.reversed.toList();
-
-    double maxVal = 0;
-    for (var key in chartKeys) {
-      final dp = dataPoints[key]!;
-      if (typeFilter == 'All') {
-        maxVal = [maxVal, dp['income']!, dp['expense']!].reduce((a, b) => a > b ? a : b);
-      } else if (typeFilter == 'Income') {
-        maxVal = maxVal > dp['income']! ? maxVal : dp['income']!;
-      } else {
-        maxVal = maxVal > dp['expense']! ? maxVal : dp['expense']!;
-      }
-    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
@@ -224,7 +345,6 @@ class _PeriodReport extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.cardColor, 
               borderRadius: BorderRadius.circular(16), 
-              border: null,
               boxShadow: isDark ? [] : [
                 BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
               ],
@@ -289,7 +409,6 @@ class _PeriodReport extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme.cardColor, 
                 borderRadius: BorderRadius.circular(16), 
-                border: null,
                 boxShadow: isDark ? [] : [
                   BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
                 ],
@@ -338,6 +457,152 @@ class _PeriodReport extends StatelessWidget {
         ),
         Text('Rs ${amount.toStringAsFixed(0)}', style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
       ],
+    );
+  }
+}
+
+class _CategoryReport extends StatelessWidget {
+  final ExpenseProvider provider;
+  final String typeFilter;
+  final String categoryFilter;
+
+  const _CategoryReport({
+    required this.provider, 
+    required this.typeFilter,
+    required this.categoryFilter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // Filter transactions based on type
+    var transactions = provider.expenses;
+    if (typeFilter == 'Expense') {
+      transactions = transactions.where((e) => !e.isIncome && e.category != 'Transfer').toList();
+    } else if (typeFilter == 'Income') {
+      transactions = transactions.where((e) => e.isIncome && e.category != 'Transfer').toList();
+    } else {
+      transactions = transactions.where((e) => e.category != 'Transfer').toList();
+    }
+
+    if (categoryFilter != 'All') {
+      transactions = transactions.where((e) => e.category == categoryFilter).toList();
+    }
+
+    // Aggregate by category
+    final Map<String, double> categoryMap = {};
+    double total = 0;
+
+    for (var t in transactions) {
+      categoryMap[t.category] = (categoryMap[t.category] ?? 0) + t.amount;
+      total += t.amount;
+    }
+
+    // Sort categories by amount
+    final sortedCategories = categoryMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    if (sortedCategories.isEmpty) {
+      return Center(child: Text('No data for categories', style: TextStyle(color: theme.textTheme.bodySmall?.color)));
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Category Distribution', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 15, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          
+          // Pie Chart
+          Container(
+            height: 240,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 4,
+                centerSpaceRadius: 50,
+                sections: sortedCategories.map((entry) {
+                  final color = AppTheme.getCategoryColor(entry.key);
+                  final percentage = (entry.value / total * 100).toStringAsFixed(1);
+                  
+                  return PieChartSectionData(
+                    color: color,
+                    value: entry.value,
+                    title: '$percentage%',
+                    radius: 60,
+                    titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          Text('Category Ranking', style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 15, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          
+          ...sortedCategories.map((entry) {
+            final color = AppTheme.getCategoryColor(entry.key);
+            final percentage = entry.value / total;
+            final icon = provider.expenses.firstWhere(
+              (e) => e.category == entry.key, 
+              orElse: () => Expense(title: '', amount: 0, category: '', date: DateTime.now())
+            ).icon ?? '📌';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+                        child: Center(child: Text(icon, style: const TextStyle(fontSize: 20))),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(entry.key, style: TextStyle(color: theme.textTheme.titleMedium?.color, fontWeight: FontWeight.bold)),
+                            Text('${(percentage * 100).toStringAsFixed(1)}% of total', style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      Text('Rs ${entry.value.toStringAsFixed(0)}', style: TextStyle(color: theme.textTheme.titleMedium?.color, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: percentage,
+                      backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
+                      color: color,
+                      minHeight: 6,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 }
